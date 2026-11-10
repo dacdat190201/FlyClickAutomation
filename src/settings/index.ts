@@ -1,4 +1,4 @@
-export { OCR_SENSITIVITY_HELP, toClickEngineConfig, toMatchOptions } from './derive';
+export { OCR_SENSITIVITY_HELP, OCR_SENSITIVITY_LABEL, toClickEngineConfig, toMatchOptions } from './derive';
 export { SETTINGS_STORAGE_KEY, SettingsStore, type SettingsListener } from './store';
 export {
   DEFAULT_SETTINGS,

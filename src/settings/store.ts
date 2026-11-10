@@ -35,7 +35,7 @@ export class SettingsStore {
         const text = await this.storage.get(this.key);
         raw = text === null ? undefined : JSON.parse(text);
       } catch (e) {
-        issues.push(`Could not read saved settings (${e instanceof Error ? e.message : String(e)}); using defaults`);
+        issues.push(`Không đọc được cài đặt đã lưu (${e instanceof Error ? e.message : String(e)}); dùng giá trị mặc định`);
       }
       const parsed = parseSettings(raw);
       this.current = parsed.settings;

@@ -4,11 +4,11 @@ import { Icon, type IconName } from '@/components/ui/icon';
 import { useTheme } from '@/hooks/use-theme';
 
 const TABS: { name: string; title: string; icon: IconName }[] = [
-  { name: 'index', title: 'Home', icon: 'home' },
-  { name: 'targets', title: 'Targets', icon: 'target' },
-  { name: 'text', title: 'Text', icon: 'text' },
-  { name: 'logs', title: 'History', icon: 'logs' },
-  { name: 'settings', title: 'Settings', icon: 'settings' },
+  { name: 'index', title: 'Trang chủ', icon: 'home' },
+  { name: 'targets', title: 'Mục tiêu', icon: 'target' },
+  { name: 'text', title: 'Văn bản', icon: 'text' },
+  { name: 'logs', title: 'Lịch sử', icon: 'logs' },
+  { name: 'settings', title: 'Cài đặt', icon: 'settings' },
 ];
 
 export default function TabsLayout() {

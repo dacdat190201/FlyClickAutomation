@@ -16,13 +16,13 @@ const digits = (v: string) => v.replace(/\D/g, '');
 const seconds = (v: string) => (v === '' ? null : Number(v) * 1000);
 
 const STATE_LABEL: Record<TimerState, string> = {
-  IDLE: 'Idle',
-  WAITING: 'Waiting to start',
-  RUNNING: 'Running',
-  PAUSED: 'Paused',
-  COMPLETED: 'Completed',
-  STOPPED: 'Stopped',
-  ERROR: 'Error',
+  IDLE: 'Chưa chạy',
+  WAITING: 'Đang chờ bắt đầu',
+  RUNNING: 'Đang chạy',
+  PAUSED: 'Tạm dừng',
+  COMPLETED: 'Hoàn thành',
+  STOPPED: 'Đã dừng',
+  ERROR: 'Lỗi',
 };
 
 /**
@@ -61,7 +61,7 @@ export function TimerPanel() {
         // Every run is saved to the history (the demo action sends no clicks).
         await addHistory({
           kind: 'timer',
-          name: `Timer run #${runIndex} (demo action)`,
+          name: `Lần chạy hẹn giờ #${runIndex} (demo)`,
           startedAt,
           durationMs: Date.now() - startedAt,
           status: 'success',
@@ -86,26 +86,26 @@ export function TimerPanel() {
   return (
     <Card>
       <ThemedText type="default" style={styles.bold}>
-        Timer
+        Hẹn giờ
       </ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
-        Demo action only, no clicks are sent. Leave a field blank for unlimited or once.
+        Chỉ chạy hành động demo, không gửi click. Để trống ô để chạy không giới hạn hoặc chạy một lần.
       </ThemedText>
 
       <View style={styles.row}>
         <View style={styles.flex}>
-          <TextField label="Start after (s)" keyboardType="number-pad" value={delay} onChangeText={(v) => setDelay(digits(v))} />
+          <TextField label="Bắt đầu sau (giây)" keyboardType="number-pad" value={delay} onChangeText={(v) => setDelay(digits(v))} />
         </View>
         <View style={styles.flex}>
-          <TextField label="Run for (s)" placeholder="∞" keyboardType="number-pad" value={duration} onChangeText={(v) => setDuration(digits(v))} />
+          <TextField label="Chạy trong (giây)" placeholder="∞" keyboardType="number-pad" value={duration} onChangeText={(v) => setDuration(digits(v))} />
         </View>
       </View>
       <View style={styles.row}>
         <View style={styles.flex}>
-          <TextField label="Every (s)" placeholder="once" keyboardType="number-pad" value={interval} onChangeText={(v) => setInterval_(digits(v))} />
+          <TextField label="Lặp mỗi (giây)" placeholder="một lần" keyboardType="number-pad" value={interval} onChangeText={(v) => setInterval_(digits(v))} />
         </View>
         <View style={styles.flex}>
-          <TextField label="Repeats" placeholder="∞" keyboardType="number-pad" value={repeats} onChangeText={(v) => setRepeats(digits(v))} />
+          <TextField label="Số lần lặp" placeholder="∞" keyboardType="number-pad" value={repeats} onChangeText={(v) => setRepeats(digits(v))} />
         </View>
       </View>
 
@@ -118,20 +118,20 @@ export function TimerPanel() {
       <View style={[styles.display, { backgroundColor: theme.primarySoft }]}>
         <ThemedText type="small" style={{ color: theme.primary }}>
           {STATE_LABEL[state]}
-          {snapshot?.inBackground ? ' (app in background)' : ''}
+          {snapshot?.inBackground ? ' (ứng dụng đang ở nền)' : ''}
         </ThemedText>
         <ThemedText type="title" style={[styles.countdown, { color: theme.primary }]}>
           {formatCountdown(snapshot?.countdownMs ?? null)}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          {snapshot?.state === 'WAITING' ? 'until start' : 'until next run'}
-          {snapshot?.remainingMs != null ? ` · ${formatCountdown(snapshot.remainingMs)} left` : ''}
+          {snapshot?.state === 'WAITING' ? 'đến lúc bắt đầu' : 'đến lần chạy kế'}
+          {snapshot?.remainingMs != null ? ` · còn ${formatCountdown(snapshot.remainingMs)}` : ''}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          Runs {snapshot?.runCount ?? 0}
+          Đã chạy {snapshot?.runCount ?? 0}
           {snapshot?.maxRepetitions ? ` / ${snapshot.maxRepetitions}` : ''}
-          {snapshot?.skippedRuns ? ` · skipped ${snapshot.skippedRuns}` : ''}
-          {snapshot?.executing ? ' · executing…' : ''} · demo actions: {actionsRun}
+          {snapshot?.skippedRuns ? ` · bỏ qua ${snapshot.skippedRuns}` : ''}
+          {snapshot?.executing ? ' · đang thực thi…' : ''} · hành động demo: {actionsRun}
         </ThemedText>
         {snapshot?.error && (
           <ThemedText type="small" style={{ color: theme.danger }}>
@@ -141,13 +141,13 @@ export function TimerPanel() {
       </View>
 
       <View style={styles.row}>
-        <Button title="Start" icon="play" disabled={active} onPress={start} style={styles.flex} />
+        <Button title="Bắt đầu" icon="play" disabled={active} onPress={start} style={styles.flex} />
         {state === 'PAUSED' ? (
-          <Button title="Resume" variant="secondary" onPress={() => engine?.resume()} style={styles.flex} />
+          <Button title="Tiếp tục" variant="secondary" onPress={() => engine?.resume()} style={styles.flex} />
         ) : (
-          <Button title="Pause" variant="secondary" disabled={!active} onPress={() => engine?.pause()} style={styles.flex} />
+          <Button title="Tạm dừng" variant="secondary" disabled={!active} onPress={() => engine?.pause()} style={styles.flex} />
         )}
-        <Button title="Stop" icon="stop" variant="danger" disabled={!active} onPress={() => engine?.stop()} style={styles.flex} />
+        <Button title="Dừng" icon="stop" variant="danger" disabled={!active} onPress={() => engine?.stop()} style={styles.flex} />
       </View>
     </Card>
   );

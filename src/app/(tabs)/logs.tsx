@@ -13,10 +13,10 @@ import { useHistory } from '@/providers/app-providers';
 
 type Filter = 'all' | HistoryStatus;
 const FILTERS = [
-  { value: 'all', label: 'All' },
-  { value: 'success', label: 'Success' },
-  { value: 'failed', label: 'Failed' },
-  { value: 'stopped', label: 'Stopped' },
+  { value: 'all', label: 'Tất cả' },
+  { value: 'success', label: 'Thành công' },
+  { value: 'failed', label: 'Thất bại' },
+  { value: 'stopped', label: 'Đã dừng' },
 ] as const;
 
 export default function HistoryScreen() {
@@ -27,23 +27,23 @@ export default function HistoryScreen() {
   const summary = summarize(visible);
 
   const confirmClear = () =>
-    Alert.alert('Clear history?', 'All saved executions will be deleted from this device.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Clear', style: 'destructive', onPress: () => void clear() },
+    Alert.alert('Xóa lịch sử?', 'Toàn bộ các lần chạy đã lưu sẽ bị xóa khỏi thiết bị này.', [
+      { text: 'Hủy', style: 'cancel' },
+      { text: 'Xóa', style: 'destructive', onPress: () => void clear() },
     ]);
 
   return (
     <Screen
-      title="History"
-      subtitle={loaded ? `${records.length} saved execution${records.length === 1 ? '' : 's'}` : 'Loading…'}
+      title="Lịch sử"
+      subtitle={loaded ? `${records.length} lần chạy đã lưu` : 'Đang tải…'}
       action={
-        <Button title="Clear" icon="trash" variant="secondary" disabled={records.length === 0} onPress={confirmClear} />
+        <Button title="Xóa" icon="trash" variant="secondary" disabled={records.length === 0} onPress={confirmClear} />
       }>
       <View style={styles.grid}>
-        <Stat label="Executions" value={String(summary.totalExecutions)} />
-        <Stat label="Avg duration" value={summary.totalExecutions ? formatDuration(summary.averageDurationMs) : '–'} />
-        <Stat label="Clicks OK" value={String(summary.successfulClicks)} />
-        <Stat label="Clicks failed" value={String(summary.failedClicks)} danger={summary.failedClicks > 0} />
+        <Stat label="Lần chạy" value={String(summary.totalExecutions)} />
+        <Stat label="Thời lượng TB" value={summary.totalExecutions ? formatDuration(summary.averageDurationMs) : '–'} />
+        <Stat label="Click thành công" value={String(summary.successfulClicks)} />
+        <Stat label="Click lỗi" value={String(summary.failedClicks)} danger={summary.failedClicks > 0} />
       </View>
 
       <SegmentedControl options={FILTERS} value={filter} onChange={setFilter} />
@@ -52,8 +52,8 @@ export default function HistoryScreen() {
         <Card>
           <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
             {records.length === 0
-              ? 'Nothing recorded yet. Run the timer on the Home tab to see an entry here.'
-              : 'No executions match this filter.'}
+              ? 'Chưa có gì được ghi. Chạy hẹn giờ ở tab Trang chủ để thấy một mục ở đây.'
+              : 'Không có lần chạy nào khớp bộ lọc.'}
           </ThemedText>
         </Card>
       ) : (
@@ -100,10 +100,10 @@ function Row({ record, first }: { record: HistoryRecord; first: boolean }) {
             {record.name}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            {new Date(record.startedAt).toLocaleString()} · {formatDuration(record.durationMs)}
+            {new Date(record.startedAt).toLocaleString('vi-VN')} · {formatDuration(record.durationMs)}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            {total} click{total === 1 ? '' : 's'} · {succeeded} ok · {failed} failed
+            {total} click · {succeeded} thành công · {failed} lỗi
           </ThemedText>
         </View>
       </View>
@@ -120,7 +120,7 @@ function Row({ record, first }: { record: HistoryRecord; first: boolean }) {
           )}
           {record.error.details && !open && (
             <ThemedText type="small" themeColor="textSecondary">
-              Tap for details
+              Bấm để xem chi tiết
             </ThemedText>
           )}
         </View>

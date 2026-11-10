@@ -47,11 +47,11 @@ export default function TargetsScreen() {
 
   return (
     <Screen
-      title="Targets"
-      subtitle={`${targets.length} click points`}
+      title="Mục tiêu"
+      subtitle={`${targets.length} điểm click`}
       action={
         <Button
-          title={showForm ? 'Cancel' : 'Add'}
+          title={showForm ? 'Hủy' : 'Thêm'}
           icon={showForm ? 'close' : 'add'}
           variant={showForm ? 'secondary' : 'primary'}
           onPress={() => setShowForm((v) => !v)}
@@ -60,9 +60,9 @@ export default function TargetsScreen() {
       {showForm && (
         <Card>
           <ThemedText type="default" style={styles.bold}>
-            New target
+            Mục tiêu mới
           </ThemedText>
-          <TextField label="Name" placeholder="e.g. Accept button" value={name} onChangeText={setName} />
+          <TextField label="Tên" placeholder="VD: Nút Đăng ký" value={name} onChangeText={setName} />
           <View style={styles.row}>
             <View style={styles.flex}>
               <TextField
@@ -83,14 +83,14 @@ export default function TargetsScreen() {
               />
             </View>
           </View>
-          <Button title="Save target" disabled={!canSave} onPress={save} />
+          <Button title="Lưu mục tiêu" disabled={!canSave} onPress={save} />
         </Card>
       )}
 
       {targets.length === 0 && (
         <Card>
           <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
-            No targets yet. Tap Add to create one.
+            Chưa có mục tiêu. Bấm Thêm để tạo.
           </ThemedText>
         </Card>
       )}
@@ -105,7 +105,7 @@ export default function TargetsScreen() {
               {t.name}
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              ({t.x}, {t.y}) · every {t.intervalMs} ms
+              ({t.x}, {t.y}) · mỗi {t.intervalMs} ms
             </ThemedText>
           </View>
           <Switch
@@ -116,7 +116,7 @@ export default function TargetsScreen() {
             ios_backgroundColor={theme.border}
           />
           <Pressable
-            accessibilityLabel={`Delete ${t.name}`}
+            accessibilityLabel={`Xóa ${t.name}`}
             hitSlop={8}
             onPress={() => remove(t.id)}>
             <Icon name="trash" color={theme.danger} size={20} />

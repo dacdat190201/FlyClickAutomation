@@ -25,9 +25,9 @@ type State =
   | { kind: 'error'; message: string };
 
 function describe(m: TextMatch): string {
-  if (!m.center || !m.box) return `“${m.matchedText}” (no coordinates)`;
+  if (!m.center || !m.box) return `“${m.matchedText}” (không có tọa độ)`;
   const { x, y } = m.center;
-  return `“${m.matchedText}” at (${Math.round(x)}, ${Math.round(y)}) · ${Math.round(m.box.width)}×${Math.round(m.box.height)}`;
+  return `“${m.matchedText}” tại (${Math.round(x)}, ${Math.round(y)}) · ${Math.round(m.box.width)}×${Math.round(m.box.height)}`;
 }
 
 /**
@@ -47,9 +47,9 @@ export function OcrTester({ config }: { config: OcrSearchConfig }) {
     } catch (e) {
       const message =
         e instanceof OcrUnavailableError
-          ? 'OCR needs a development build. It is not available in Expo Go.'
+          ? 'OCR cần development build, không dùng được trong Expo Go.'
           : e instanceof Error
-            ? e.message
+            ? `Lỗi: ${e.message}`
             : String(e);
       setState({ kind: 'error', message });
     }
@@ -65,34 +65,34 @@ export function OcrTester({ config }: { config: OcrSearchConfig }) {
 
   const result = state.kind === 'done' ? state.result : null;
   const statusLabel = {
-    success: 'Success keyword found',
-    'target-found': 'Target found',
-    'not-found': 'Nothing found',
+    success: 'Đã thấy chữ báo thành công',
+    'target-found': 'Đã thấy mục tiêu',
+    'not-found': 'Không thấy gì',
   };
 
   return (
     <Card>
       <ThemedText type="default" style={styles.bold}>
-        Test with a screenshot
+        Thử với ảnh chụp màn hình
       </ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
-        Pick an image from your photo library. Only the image you choose is read.
+        Chọn một ảnh từ thư viện ảnh. Ứng dụng chỉ đọc đúng ảnh bạn chọn.
       </ThemedText>
 
       {uri && <Image source={{ uri }} contentFit="contain" style={styles.preview} />}
 
       <Button
-        title={uri ? 'Choose another image' : 'Choose image'}
+        title={uri ? 'Chọn ảnh khác' : 'Chọn ảnh'}
         disabled={state.kind === 'scanning'}
         onPress={pick}
       />
       {uri && state.kind !== 'scanning' && (
-        <Button title="Scan again" variant="secondary" onPress={() => run(uri)} />
+        <Button title="Quét lại" variant="secondary" onPress={() => run(uri)} />
       )}
 
       {state.kind === 'scanning' && (
         <ThemedText type="small" themeColor="textSecondary">
-          Recognizing text…
+          Đang nhận diện chữ…
         </ThemedText>
       )}
 
@@ -105,26 +105,26 @@ export function OcrTester({ config }: { config: OcrSearchConfig }) {
       {result && (
         <View style={styles.results}>
           <ThemedText type="smallBold" style={{ color: result.status === 'not-found' ? theme.textSecondary : theme.primary }}>
-            {statusLabel[result.status]} · {result.ocr.lines.length} lines recognized
+            {statusLabel[result.status]} · nhận diện {result.ocr.lines.length} dòng
           </ThemedText>
 
-          <ThemedText type="smallBold">Targets ({result.targets.length})</ThemedText>
+          <ThemedText type="smallBold">Mục tiêu ({result.targets.length})</ThemedText>
           {result.targets.map((m, i) => (
             <ThemedText key={`t${i}`} type="small" themeColor="textSecondary">
               {describe(m)}
             </ThemedText>
           ))}
 
-          <ThemedText type="smallBold">Success ({result.successes.length})</ThemedText>
+          <ThemedText type="smallBold">Thành công ({result.successes.length})</ThemedText>
           {result.successes.map((m, i) => (
             <ThemedText key={`s${i}`} type="small" themeColor="textSecondary">
               {describe(m)}
             </ThemedText>
           ))}
 
-          <ThemedText type="smallBold">Recognized text</ThemedText>
+          <ThemedText type="smallBold">Chữ nhận diện được</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            {result.ocr.text || '(empty)'}
+            {result.ocr.text || '(trống)'}
           </ThemedText>
         </View>
       )}

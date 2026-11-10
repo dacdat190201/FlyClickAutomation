@@ -13,20 +13,20 @@ export function checkSetting<K extends keyof Settings>(key: K, value: unknown): 
     case 'clickIntervalMs':
     case 'retryCount': {
       const { min, max } = SETTINGS_LIMITS[key as 'clickIntervalMs' | 'retryCount'];
-      const label = key === 'clickIntervalMs' ? 'Click interval' : 'Retry count';
+      const label = key === 'clickIntervalMs' ? 'Khoảng cách click' : 'Số lần thử lại';
       const unit = key === 'clickIntervalMs' ? ' ms' : '';
       return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max
         ? null
-        : `${label} must be a whole number from ${min} to ${max}${unit}`;
+        : `${label} phải là số nguyên từ ${min} đến ${max}${unit}`;
     }
     case 'ocrSensitivity':
-      return OCR_SENSITIVITIES.includes(value as never) ? null : 'OCR sensitivity must be strict, balanced or lenient';
+      return OCR_SENSITIVITIES.includes(value as never) ? null : 'Độ nhạy OCR phải là chặt, cân bằng hoặc thoáng';
     case 'theme':
-      return THEMES.includes(value as never) ? null : 'Theme must be system, light or dark';
+      return THEMES.includes(value as never) ? null : 'Chủ đề phải là theo hệ thống, sáng hoặc tối';
     case 'hapticFeedback':
-      return typeof value === 'boolean' ? null : 'Haptic feedback must be on or off';
+      return typeof value === 'boolean' ? null : 'Rung phản hồi phải là bật hoặc tắt';
     default:
-      return `Unknown setting "${String(key)}"`;
+      return `Cài đặt không hợp lệ "${String(key)}"`;
   }
 }
 
@@ -36,7 +36,7 @@ export function validatePatch(patch: Partial<Settings>): Partial<Settings> {
   const clean: Partial<Settings> = {};
   for (const key of Object.keys(patch) as (keyof Settings)[]) {
     if (!(key in DEFAULT_SETTINGS)) {
-      problems.push(`Unknown setting "${key}"`);
+      problems.push(`Cài đặt không hợp lệ "${key}"`);
       continue;
     }
     const message = checkSetting(key, patch[key]);
@@ -55,7 +55,7 @@ export function parseSettings(raw: unknown): { settings: Settings; issues: strin
   const issues: string[] = [];
   const settings: Settings = { ...DEFAULT_SETTINGS };
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
-    if (raw !== undefined && raw !== null) issues.push('Stored settings are not an object; using defaults');
+    if (raw !== undefined && raw !== null) issues.push('Cài đặt đã lưu không hợp lệ; dùng giá trị mặc định');
     return { settings, issues };
   }
 
@@ -63,7 +63,7 @@ export function parseSettings(raw: unknown): { settings: Settings; issues: strin
   for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]) {
     if (!(key in stored)) continue;
     const message = checkSetting(key, stored[key]);
-    if (message) issues.push(`${message}; using the default`);
+    if (message) issues.push(`${message}; dùng giá trị mặc định`);
     else (settings as Record<string, unknown>)[key] = stored[key];
   }
   return { settings, issues };

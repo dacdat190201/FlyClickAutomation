@@ -22,7 +22,7 @@ export default function HomeScreen() {
   const activeTargets = MOCK_TARGETS.filter((t) => t.enabled);
 
   return (
-    <Screen title="FlyClick" subtitle="Automation dashboard">
+    <Screen title="FlyClick" subtitle="Bảng điều khiển tự động hóa">
       <Card style={styles.statusCard}>
         <View
           style={[
@@ -33,20 +33,20 @@ export default function HomeScreen() {
             style={[styles.dot, { backgroundColor: running ? theme.success : theme.textSecondary }]}
           />
           <ThemedText type="smallBold" style={{ color: running ? theme.success : theme.textSecondary }}>
-            {running ? 'Running' : 'Stopped'}
+            {running ? 'Đang chạy' : 'Đã dừng'}
           </ThemedText>
         </View>
         <ThemedText type="subtitle" style={styles.statusTitle}>
-          {running ? 'Automation is active' : 'Ready to start'}
+          {running ? 'Tự động hóa đang hoạt động' : 'Sẵn sàng bắt đầu'}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          {activeTargets.length} active targets · demo mode, no real clicks are sent
+          {activeTargets.length} mục tiêu đang bật · chế độ demo, chưa gửi click thật
         </ThemedText>
       </Card>
 
       <View style={styles.buttons}>
         <Button
-          title="Start"
+          title="Bắt đầu"
           icon="play"
           size="xl"
           disabled={running}
@@ -54,7 +54,7 @@ export default function HomeScreen() {
           style={styles.flex}
         />
         <Button
-          title="Stop"
+          title="Dừng"
           icon="stop"
           size="xl"
           variant="danger"
@@ -65,17 +65,17 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.stats}>
-        <StatCard icon="bolt" label="Executions" value={String(summary.totalExecutions)} />
-        <StatCard icon="check" label="Clicks OK" value={String(summary.successfulClicks)} />
-        <StatCard icon="error" label="Clicks failed" value={String(summary.failedClicks)} />
+        <StatCard icon="bolt" label="Lần chạy" value={String(summary.totalExecutions)} />
+        <StatCard icon="check" label="Click thành công" value={String(summary.successfulClicks)} />
+        <StatCard icon="error" label="Click lỗi" value={String(summary.failedClicks)} />
       </View>
 
       <Card>
         <View style={styles.cardHeader}>
           <ThemedText type="default" style={styles.bold}>
-            Active targets
+            Mục tiêu đang bật
           </ThemedText>
-          <Button title="Manage" variant="secondary" onPress={() => router.navigate('/targets')} />
+          <Button title="Quản lý" variant="secondary" onPress={() => router.navigate('/targets')} />
         </View>
         {activeTargets.map((t) => (
           <View key={t.id} style={styles.targetRow}>
@@ -84,7 +84,7 @@ export default function HomeScreen() {
               {t.name}
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              every {t.intervalMs} ms
+              mỗi {t.intervalMs} ms
             </ThemedText>
           </View>
         ))}

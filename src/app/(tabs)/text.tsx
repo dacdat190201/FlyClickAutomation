@@ -7,7 +7,7 @@ import { Screen } from '@/components/ui/screen';
 import { ThemedText } from '@/components/themed-text';
 import { useSettings } from '@/providers/app-providers';
 import type { OcrSearchConfig } from '@/ocr';
-import { OCR_SENSITIVITY_HELP, toMatchOptions } from '@/settings';
+import { OCR_SENSITIVITY_HELP, OCR_SENSITIVITY_LABEL, toMatchOptions } from '@/settings';
 
 export default function TextScreen() {
   const { settings } = useSettings();
@@ -17,27 +17,27 @@ export default function TextScreen() {
   const config: OcrSearchConfig = { targetKeywords, successKeywords, ...toMatchOptions(settings.ocrSensitivity) };
 
   return (
-    <Screen title="Text detection" subtitle="Find buttons by the text on screen">
+    <Screen title="Nhận diện văn bản" subtitle="Tìm nút theo chữ trên màn hình">
       <KeywordList
-        title="Target keywords"
-        description="Text of the button to find. Case-insensitive."
+        title="Từ khóa mục tiêu"
+        description="Chữ trên nút cần tìm. Không phân biệt hoa/thường."
         keywords={targetKeywords}
         onChange={setTargetKeywords}
-        placeholder="e.g. Đăng ký"
+        placeholder="VD: Đăng ký"
       />
       <KeywordList
-        title="Success keywords"
-        description="Text that means the action worked."
+        title="Từ khóa thành công"
+        description="Chữ cho biết thao tác đã thành công."
         keywords={successKeywords}
         onChange={setSuccessKeywords}
-        placeholder="e.g. Đã đăng ký"
+        placeholder="VD: Đã đăng ký"
       />
       <Card>
         <ThemedText type="default" style={{ fontWeight: '700' }}>
-          Matching: {settings.ocrSensitivity}
+          Độ nhạy khớp: {OCR_SENSITIVITY_LABEL[settings.ocrSensitivity]}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          {OCR_SENSITIVITY_HELP[settings.ocrSensitivity]} Change it in Settings.
+          {OCR_SENSITIVITY_HELP[settings.ocrSensitivity]} Đổi trong Cài đặt.
         </ThemedText>
       </Card>
       <OcrTester config={config} />

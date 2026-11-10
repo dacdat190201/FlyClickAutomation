@@ -13,6 +13,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useSettings } from '@/providers/app-providers';
 import {
   OCR_SENSITIVITY_HELP,
+  OCR_SENSITIVITY_LABEL,
   SettingsError,
   checkSetting,
   type OcrSensitivity,
@@ -21,14 +22,14 @@ import {
 } from '@/settings';
 
 const SENSITIVITIES: { value: OcrSensitivity; label: string }[] = [
-  { value: 'strict', label: 'Strict' },
-  { value: 'balanced', label: 'Balanced' },
-  { value: 'lenient', label: 'Lenient' },
+  { value: 'strict', label: OCR_SENSITIVITY_LABEL.strict },
+  { value: 'balanced', label: OCR_SENSITIVITY_LABEL.balanced },
+  { value: 'lenient', label: OCR_SENSITIVITY_LABEL.lenient },
 ];
 const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
-  { value: 'system', label: 'System' },
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
+  { value: 'system', label: 'Theo hệ thống' },
+  { value: 'light', label: 'Sáng' },
+  { value: 'dark', label: 'Tối' },
 ];
 
 export default function SettingsScreen() {
@@ -42,20 +43,20 @@ export default function SettingsScreen() {
       await update(patch);
       setError(null);
     } catch (e) {
-      setError(e instanceof SettingsError ? e.problems.join('. ') : 'Could not save settings');
+      setError(e instanceof SettingsError ? e.problems.join('. ') : 'Không lưu được cài đặt');
     }
   };
 
   return (
-    <Screen title="Settings" subtitle="Saved automatically on this device">
+    <Screen title="Settings" subtitle="Tự động lưu trên thiết bị này">
       <Card>
         <ThemedText type="default" style={styles.bold}>
-          Clicking
+          Click
         </ThemedText>
         <View style={styles.row}>
           <View style={styles.flex}>
             <NumberField
-              label="Click interval (ms)"
+              label="Khoảng cách click (ms)"
               value={settings.clickIntervalMs}
               settingKey="clickIntervalMs"
               onCommit={(n) => save({ clickIntervalMs: n })}
@@ -64,7 +65,7 @@ export default function SettingsScreen() {
           </View>
           <View style={styles.flex}>
             <NumberField
-              label="Retry count"
+              label="Số lần thử lại"
               value={settings.retryCount}
               settingKey="retryCount"
               onCommit={(n) => save({ retryCount: n })}
@@ -73,13 +74,13 @@ export default function SettingsScreen() {
           </View>
         </View>
         <ThemedText type="small" themeColor="textSecondary">
-          Defaults for new clicks and automations: the minimum gap between clicks, and how many times a failed click is retried.
+          Giá trị mặc định cho click và tự động hóa mới: khoảng cách tối thiểu giữa các click, và số lần thử lại khi click thất bại.
         </ThemedText>
       </Card>
 
       <Card>
         <ThemedText type="default" style={styles.bold}>
-          OCR matching sensitivity
+          Độ nhạy khớp chữ OCR
         </ThemedText>
         <SegmentedControl options={SENSITIVITIES} value={settings.ocrSensitivity} onChange={(v) => save({ ocrSensitivity: v })} />
         <ThemedText type="small" themeColor="textSecondary">
@@ -89,15 +90,15 @@ export default function SettingsScreen() {
 
       <Card>
         <ThemedText type="default" style={styles.bold}>
-          Appearance and feedback
+          Giao diện và phản hồi
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          Theme
+          Chủ đề
         </ThemedText>
         <SegmentedControl options={THEME_OPTIONS} value={settings.theme} onChange={(v) => save({ theme: v })} />
         <SwitchRow
-          label="Haptic feedback"
-          description="A small vibration when you press buttons and change options"
+          label="Rung phản hồi"
+          description="Rung nhẹ khi bấm nút và đổi tùy chọn"
           value={settings.hapticFeedback}
           onValueChange={(v) => save({ hapticFeedback: v })}
         />
@@ -110,7 +111,7 @@ export default function SettingsScreen() {
       )}
 
       <Button
-        title="Reset to defaults"
+        title="Khôi phục mặc định"
         variant="secondary"
         onPress={() => {
           setError(null);
@@ -145,7 +146,7 @@ function NumberField({
   const commit = () => {
     if (draft === null) return;
     const n = Number(draft);
-    const problem = draft === '' ? 'Enter a number' : checkSetting(settingKey, n);
+    const problem = draft === '' ? 'Hãy nhập một số' : checkSetting(settingKey, n);
     if (problem) onInvalid(problem);
     else if (n !== value) onCommit(n);
     setDraft(null); // always fall back to the saved value

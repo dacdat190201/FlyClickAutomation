@@ -3,10 +3,10 @@ import type { MatchOptions } from '../ocr';
 import type { OcrSensitivity, Settings } from './types';
 
 /**
- * How OCR text is matched at each sensitivity:
- * - strict: the whole line must equal the keyword, accents must match.
- * - balanced: the keyword may be part of a line, accents must match.
- * - lenient: the keyword may be part of a line and accents are ignored (OCR often drops them).
+ * Cách khớp chữ OCR ở từng mức:
+ * - strict: cả dòng phải trùng từ khóa, phải đúng dấu.
+ * - balanced: từ khóa có thể nằm trong một dòng, phải đúng dấu.
+ * - lenient: từ khóa có thể nằm trong một dòng và bỏ qua dấu (OCR hay đọc mất dấu).
  */
 export function toMatchOptions(sensitivity: OcrSensitivity): MatchOptions {
   switch (sensitivity) {
@@ -20,9 +20,15 @@ export function toMatchOptions(sensitivity: OcrSensitivity): MatchOptions {
 }
 
 export const OCR_SENSITIVITY_HELP: Record<OcrSensitivity, string> = {
-  strict: 'The whole line must equal the keyword, accents must match.',
-  balanced: 'The keyword may be part of a line, accents must match.',
-  lenient: 'The keyword may be part of a line and accents are ignored. Best when OCR drops accents.',
+  strict: 'Cả dòng phải trùng từ khóa và phải đúng dấu.',
+  balanced: 'Từ khóa có thể nằm trong một dòng, nhưng phải đúng dấu.',
+  lenient: 'Từ khóa có thể nằm trong một dòng và bỏ qua dấu. Phù hợp khi OCR đọc mất dấu.',
+};
+
+export const OCR_SENSITIVITY_LABEL: Record<OcrSensitivity, string> = {
+  strict: 'Chặt',
+  balanced: 'Cân bằng',
+  lenient: 'Thoáng',
 };
 
 /** Click Engine defaults from the saved settings. */

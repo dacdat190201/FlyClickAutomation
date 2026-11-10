@@ -41,13 +41,13 @@ export function KeywordList({ title, description, keywords, onChange, placeholde
       <View style={styles.chips}>
         {keywords.length === 0 && (
           <ThemedText type="small" themeColor="textSecondary">
-            No keywords yet.
+            Chưa có từ khóa.
           </ThemedText>
         )}
         {keywords.map((k) => (
           <Pressable
             key={k}
-            accessibilityLabel={`Remove ${k}`}
+            accessibilityLabel={`Xóa ${k}`}
             onPress={() => onChange(keywords.filter((x) => x !== k))}
             style={[styles.chip, { backgroundColor: theme.primarySoft }]}>
             <ThemedText type="smallBold" style={{ color: theme.primary }}>
@@ -59,14 +59,14 @@ export function KeywordList({ title, description, keywords, onChange, placeholde
       </View>
 
       <TextField
-        label="Add keyword"
+        label="Thêm từ khóa"
         placeholder={placeholder}
         value={draft}
         onChangeText={setDraft}
         onSubmitEditing={() => draft.trim() && add()}
         returnKeyType="done"
       />
-      <Button title="Add" icon="add" variant="secondary" disabled={!draft.trim()} onPress={add} />
+      <Button title="Thêm" icon="add" variant="secondary" disabled={!draft.trim()} onPress={add} />
     </Card>
   );
 }
