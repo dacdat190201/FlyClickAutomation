@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="fly_click_service_label">FlyClick tap service</string>
+  <string name="fly_click_service_description">Lets FlyClickAutomation perform screen taps that you start and can stop at any time. It does not read the content of your screen or collect any data.</string>
+</resources>

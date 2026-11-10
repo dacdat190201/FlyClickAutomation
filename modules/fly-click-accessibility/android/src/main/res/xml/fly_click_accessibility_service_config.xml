@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Data minimisation: the service listens to NO accessibility events and does NOT read window
+  content. It can only perform the tap gestures this app asks for.
+  `isAccessibilityTool` is deliberately not set: this is not an assistive technology.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+  android:accessibilityEventTypes="typeNone"
+  android:accessibilityFeedbackType="feedbackGeneric"
+  android:canPerformGestures="true"
+  android:canRetrieveWindowContent="false"
+  android:description="@string/fly_click_service_description"
+  android:notificationTimeout="100" />
