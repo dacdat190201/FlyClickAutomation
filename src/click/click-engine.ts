@@ -96,6 +96,10 @@ export class ClickEngine {
     return this.adapter.capabilities;
   }
 
+  get platform() {
+    return this.adapter.platform;
+  }
+
   getAvailability() {
     return this.adapter.getAvailability();
   }
