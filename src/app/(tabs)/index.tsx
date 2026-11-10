@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
+import { TimerPanel } from '@/components/timer-panel';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
@@ -85,6 +86,8 @@ export default function HomeScreen() {
           </View>
         ))}
       </Card>
+
+      <TimerPanel />
     </Screen>
   );
 }
