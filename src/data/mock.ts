@@ -9,13 +9,6 @@ export type Target = {
   enabled: boolean;
 };
 
-export type TextRule = {
-  id: string;
-  keyword: string;
-  action: string;
-  enabled: boolean;
-};
-
 export type LogEntry = {
   id: string;
   message: string;
@@ -33,12 +26,6 @@ export const MOCK_TARGETS: Target[] = [
   { id: 't1', name: 'Accept button', x: 540, y: 1820, intervalMs: 800, enabled: true },
   { id: 't2', name: 'Claim reward', x: 320, y: 960, intervalMs: 1500, enabled: true },
   { id: 't3', name: 'Close popup', x: 980, y: 210, intervalMs: 2000, enabled: false },
-];
-
-export const MOCK_RULES: TextRule[] = [
-  { id: 'r1', keyword: 'Accept', action: 'Tap match', enabled: true },
-  { id: 'r2', keyword: 'Continue', action: 'Tap match', enabled: true },
-  { id: 'r3', keyword: 'Error', action: 'Stop automation', enabled: false },
 ];
 
 export const MOCK_LOGS: LogEntry[] = [
