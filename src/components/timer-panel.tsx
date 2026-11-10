@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { TextField } from '@/components/ui/text-field';
 import { useTheme } from '@/hooks/use-theme';
 import { useTimerSnapshot } from '@/hooks/use-timer-snapshot';
+import { useHistory } from '@/providers/app-providers';
 import { bindTimerToAppState } from '@/timer/app-state-binding';
 import { formatCountdown, TimerEngine, type TimerState } from '@/timer';
 
@@ -38,6 +39,7 @@ export function TimerPanel() {
   const [engine, setEngine] = useState<TimerEngine | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
   const snapshot = useTimerSnapshot(engine);
+  const { add: addHistory } = useHistory();
 
   // Tell the engine when the app goes to the background / returns, and clean up on unmount.
   useEffect(() => {
@@ -53,7 +55,18 @@ export function TimerPanel() {
     try {
       engine?.stop();
       setActionsRun(0);
-      const next = new TimerEngine(() => setActionsRun((n) => n + 1), {
+      const next = new TimerEngine(async ({ runIndex }) => {
+        const startedAt = Date.now();
+        setActionsRun((n) => n + 1);
+        // Every run is saved to the history (the demo action sends no clicks).
+        await addHistory({
+          kind: 'timer',
+          name: `Timer run #${runIndex} (demo action)`,
+          startedAt,
+          durationMs: Date.now() - startedAt,
+          status: 'success',
+        }).catch(() => undefined);
+      }, {
         startDelayMs: Number(delay || 0) * 1000,
         durationMs: seconds(duration),
         intervalMs: seconds(interval),

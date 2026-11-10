@@ -47,6 +47,8 @@ type RunState = {
   startedAt: number;
   tabs: TabResult[];
   clicks: number;
+  clicksOk: number;
+  clicksFailed: number;
   /** Most recent scan whose content passed the unexpected-change check. */
   lastScan: ScanResult | null;
   /** Set when remaining tabs cannot be reached (navigation unsupported). */
@@ -64,6 +66,8 @@ function newRun(now: number, tabs: TabConfig[]): RunState {
     startedAt: now,
     tabs: tabs.map((t) => ({ name: t.name, status: 'pending', registered: [], failed: [] })),
     clicks: 0,
+    clicksOk: 0,
+    clicksFailed: 0,
     lastScan: null,
     halted: false,
     timedOut: false,
@@ -335,15 +339,18 @@ export class SmartRegistrationWorkflow {
     this.log(run, 'info', 'click', `Clicking (${Math.round(center.x)}, ${Math.round(center.y)})`, { attempt });
     try {
       await this.deps.clicker.click({ x: center.x, y: center.y }, { verify, allowRepeat: attempt > 1, signal: clickAbort.signal });
+      run.clicksOk++;
       return 'verified';
     } catch (e) {
       if (run.fatal) {
+        run.clicksFailed++;
         const fatal = run.fatal;
         run.fatal = null;
         throw fatal;
       }
       if (ctx.signal.aborted) return 'aborted';
 
+      run.clicksFailed++;
       const error = toClickError(e);
       this.log(run, 'warn', 'click', `Click failed (${error.code}): ${error.message}`);
       switch (error.code) {
@@ -408,6 +415,7 @@ export class SmartRegistrationWorkflow {
       this.log(run, 'info', 'navigate', `Clicking tab "${label}" at (${Math.round(center.x)}, ${Math.round(center.y)}), attempt ${attempt}/${attempts}`);
       try {
         await this.deps.clicker.click({ x: center.x, y: center.y }, { verify, allowRepeat: attempt > 1, signal: ctx.signal });
+        run.clicksOk++;
         run.lastScan = latest; // a new tab legitimately looks different
         this.log(run, 'info', 'navigate', `Tab "${tab.name}" is open`);
         return 'ok';
@@ -417,6 +425,7 @@ export class SmartRegistrationWorkflow {
         if (error.code === 'UNSUPPORTED' || error.code === 'UNAVAILABLE' || error.code === 'NO_TARGET') {
           return 'unsupported';
         }
+        run.clicksFailed++;
         lastError = error;
         this.log(run, 'warn', 'navigate', `Tab click not confirmed (${error.code}): ${error.message}`);
       }
@@ -518,6 +527,7 @@ export class SmartRegistrationWorkflow {
     const base = {
       tabs,
       totalClicks: run.clicks,
+      clicks: { total: run.clicks, succeeded: run.clicksOk, failed: run.clicksFailed },
       durationMs: this.now() - run.startedAt,
       log: [...run.log],
     };

@@ -8,13 +8,16 @@ import { TimerPanel } from '@/components/timer-panel';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
-import { MOCK_STATS, MOCK_TARGETS } from '@/data/mock';
+import { MOCK_TARGETS } from '@/data/mock';
 import { useTheme } from '@/hooks/use-theme';
+import { useHistory } from '@/providers/app-providers';
+import type { IconName } from '@/components/ui/icon';
 
 export default function HomeScreen() {
   const theme = useTheme();
   const router = useRouter();
   const [running, setRunning] = useState(false);
+  const { summary } = useHistory();
 
   const activeTargets = MOCK_TARGETS.filter((t) => t.enabled);
 
@@ -62,9 +65,9 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.stats}>
-        <StatCard icon="bolt" label="Clicks today" value={String(MOCK_STATS.clicksToday)} />
-        <StatCard icon="check" label="Success" value={MOCK_STATS.successRate} />
-        <StatCard icon="timer" label="Uptime" value={running ? MOCK_STATS.uptime : '00:00:00'} />
+        <StatCard icon="bolt" label="Executions" value={String(summary.totalExecutions)} />
+        <StatCard icon="check" label="Clicks OK" value={String(summary.successfulClicks)} />
+        <StatCard icon="error" label="Clicks failed" value={String(summary.failedClicks)} />
       </View>
 
       <Card>
@@ -97,7 +100,7 @@ function StatCard({
   label,
   value,
 }: {
-  icon: 'bolt' | 'check' | 'timer';
+  icon: IconName;
   label: string;
   value: string;
 }) {

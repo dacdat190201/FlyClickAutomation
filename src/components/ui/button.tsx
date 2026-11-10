@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { useHaptics } from '@/hooks/use-haptics';
 import { useTheme } from '@/hooks/use-theme';
 
 import { Icon, type IconName } from './icon';
@@ -24,6 +25,7 @@ export function Button({
   style,
 }: ButtonProps) {
   const theme = useTheme();
+  const haptics = useHaptics();
 
   const palette = {
     primary: { bg: theme.primary, fg: theme.onPrimary, border: theme.primary },
@@ -38,7 +40,10 @@ export function Button({
       accessibilityRole="button"
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
-      onPress={onPress}
+      onPress={() => {
+        haptics.light();
+        onPress?.();
+      }}
       style={({ pressed }) => [
         styles.base,
         big ? styles.xl : styles.md,

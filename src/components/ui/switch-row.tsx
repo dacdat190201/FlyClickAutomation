@@ -1,6 +1,7 @@
 import { StyleSheet, Switch, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { useHaptics } from '@/hooks/use-haptics';
 import { useTheme } from '@/hooks/use-theme';
 
 type SwitchRowProps = {
@@ -12,6 +13,7 @@ type SwitchRowProps = {
 
 export function SwitchRow({ label, description, value, onValueChange }: SwitchRowProps) {
   const theme = useTheme();
+  const haptics = useHaptics();
   return (
     <View style={styles.row}>
       <View style={styles.text}>
@@ -24,7 +26,10 @@ export function SwitchRow({ label, description, value, onValueChange }: SwitchRo
       </View>
       <Switch
         value={value}
-        onValueChange={onValueChange}
+        onValueChange={(next) => {
+          haptics.selection();
+          onValueChange(next);
+        }}
         trackColor={{ false: theme.border, true: theme.primary }}
         thumbColor="#ffffff"
         ios_backgroundColor={theme.border}

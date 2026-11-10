@@ -123,6 +123,8 @@ export type WorkflowResult = {
   message?: string;
   tabs: TabResult[];
   totalClicks: number;
+  /** Clicks that were confirmed, and clicks that failed or were not confirmed. */
+  clicks: { total: number; succeeded: number; failed: number };
   durationMs: number;
   log: WorkflowLogEntry[];
 };

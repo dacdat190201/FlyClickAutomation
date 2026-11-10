@@ -9,9 +9,11 @@ import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
 import { MOCK_TARGETS, type Target } from '@/data/mock';
 import { useTheme } from '@/hooks/use-theme';
+import { useSettings } from '@/providers/app-providers';
 
 export default function TargetsScreen() {
   const theme = useTheme();
+  const { settings } = useSettings();
   const [targets, setTargets] = useState<Target[]>(MOCK_TARGETS);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
@@ -28,7 +30,7 @@ export default function TargetsScreen() {
         name: name.trim(),
         x: Number(x),
         y: Number(y),
-        intervalMs: 1000,
+        intervalMs: settings.clickIntervalMs,
         enabled: true,
       },
     ]);
