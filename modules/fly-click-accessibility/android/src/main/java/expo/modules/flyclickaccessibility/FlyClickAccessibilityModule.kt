@@ -31,6 +31,33 @@ class FlyClickAccessibilityModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("FlyClickAccessibility")
 
+    Events("onFloatingAction")
+
+    OnDestroy {
+      mainHandler.post { FlyClickAccessibilityService.instance?.hideControls() }
+    }
+
+    // Shows the draggable control bar over other apps. Returns false if the service is not on.
+    AsyncFunction("showFloatingControls") { playing: Boolean, promise: Promise ->
+      val service = FlyClickAccessibilityService.instance
+      if (service == null) {
+        promise.resolve(false)
+        return@AsyncFunction
+      }
+      mainHandler.post {
+        service.showControls(playing) { action -> sendEvent("onFloatingAction", mapOf("action" to action)) }
+        promise.resolve(true)
+      }
+    }
+
+    Function("setFloatingPlaying") { playing: Boolean ->
+      mainHandler.post { FlyClickAccessibilityService.instance?.setControlsPlaying(playing) }
+    }
+
+    Function("hideFloatingControls") {
+      mainHandler.post { FlyClickAccessibilityService.instance?.hideControls() }
+    }
+
     Function("isServiceEnabled") {
       FlyClickAccessibilityService.instance != null
     }

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Alert, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { MOCK_TARGETS } from '@/data/mock';
+import { useFloatingControls } from '@/hooks/use-floating-controls';
 import { useTheme } from '@/hooks/use-theme';
 import { useHistory } from '@/providers/app-providers';
 import type { IconName } from '@/components/ui/icon';
@@ -18,6 +19,11 @@ export default function HomeScreen() {
   const router = useRouter();
   const [running, setRunning] = useState(false);
   const { summary } = useHistory();
+
+  const floating = useFloatingControls({
+    running,
+    onToggle: useCallback(() => setRunning((r) => !r), []),
+  });
 
   const activeTargets = MOCK_TARGETS.filter((t) => t.enabled);
 
@@ -63,6 +69,19 @@ export default function HomeScreen() {
           style={styles.flex}
         />
       </View>
+
+      {floating.available && (
+        <Button
+          title="Hiện thanh điều khiển nổi"
+          icon="bolt"
+          variant="secondary"
+          onPress={async () => {
+            if (!(await floating.show())) {
+              Alert.alert('Chưa bật dịch vụ', 'Hãy bật FlyClick trong Cài đặt → Trợ năng, rồi thử lại.');
+            }
+          }}
+        />
+      )}
 
       <View style={styles.stats}>
         <StatCard icon="bolt" label="Lần chạy" value={String(summary.totalExecutions)} />

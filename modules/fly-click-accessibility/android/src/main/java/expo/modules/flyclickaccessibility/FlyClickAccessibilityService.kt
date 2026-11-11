@@ -19,12 +19,30 @@ class FlyClickAccessibilityService : AccessibilityService() {
     instance = this
   }
 
+  private var controls: FloatingControls? = null
+
+  /** Shows the floating bar. [onAction] receives "toggle" or "close". Main thread only. */
+  fun showControls(playing: Boolean, onAction: (String) -> Unit) {
+    val c = controls ?: FloatingControls(this).also { controls = it }
+    c.show(playing, onAction)
+  }
+
+  fun setControlsPlaying(playing: Boolean) {
+    controls?.setPlaying(playing)
+  }
+
+  fun hideControls() {
+    controls?.hide()
+  }
+
   override fun onUnbind(intent: android.content.Intent?): Boolean {
+    hideControls()
     if (instance === this) instance = null
     return super.onUnbind(intent)
   }
 
   override fun onDestroy() {
+    hideControls()
     if (instance === this) instance = null
     super.onDestroy()
   }

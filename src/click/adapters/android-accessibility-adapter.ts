@@ -23,6 +23,16 @@ export interface FlyClickNativeModule {
    * ERR_INVALID_DURATION or ERR_DISPATCH_REJECTED.
    */
   tap(x: number, y: number, durationMs: number): Promise<boolean>;
+  /** Shows the draggable control bar over other apps. Resolves false if the service is off. */
+  showFloatingControls(playing: boolean): Promise<boolean>;
+  /** Switches the bar's main button between play and pause. */
+  setFloatingPlaying(playing: boolean): void;
+  hideFloatingControls(): void;
+  /** `onFloatingAction` fires with `{ action: 'toggle' | 'close' }` when a bar button is pressed. */
+  addListener(
+    event: 'onFloatingAction',
+    listener: (e: { action: 'toggle' | 'close' }) => void,
+  ): { remove(): void };
 }
 
 function errorCode(e: unknown): string {
