@@ -7,6 +7,9 @@ import type {
   TapRequest,
 } from '../types';
 
+export type ScreenNode = { text: string; x: number; y: number; w: number; h: number; clickable: boolean };
+export type ScreenSnapshot = { pkg: string; self: string; nodes: ScreenNode[] };
+
 /**
  * Contract of the Kotlin module in modules/fly-click-accessibility
  * (`requireOptionalNativeModule('FlyClickAccessibility')`).
@@ -23,15 +26,36 @@ export interface FlyClickNativeModule {
    * ERR_INVALID_DURATION or ERR_DISPATCH_REJECTED.
    */
   tap(x: number, y: number, durationMs: number): Promise<boolean>;
+  /**
+   * Text nodes of the window in front (screen pixels), or null when no window is available.
+   * `self` is this app's package name, so callers can refuse to act on their own screen.
+   */
+  snapshot(): ScreenSnapshot | null;
+  /** Dispatches a straight swipe between two screen pixels. Same error codes as `tap`. */
+  swipe(x1: number, y1: number, x2: number, y2: number, durationMs: number): Promise<boolean>;
   /** Shows the draggable control bar over other apps. Resolves false if the service is off. */
   showFloatingControls(playing: boolean): Promise<boolean>;
   /** Switches the bar's main button between play and pause. */
   setFloatingPlaying(playing: boolean): void;
   hideFloatingControls(): void;
-  /** `onFloatingAction` fires with `{ action: 'toggle' | 'close' }` when a bar button is pressed. */
+  /** Short text above the bar's buttons (e.g. the click count). */
+  setFloatingStatus(text: string): void;
+  /** Flashes a ring with `label` at screen pixel (x, y) so taps are visible. Not touchable. */
+  showTapMarker(x: number, y: number, label: string): void;
+  /** Shows the crosshair picker (drag it, press "Lưu" to save a point). Resolves false if the service is off. */
+  showPointPicker(): Promise<boolean>;
+  hidePointPicker(): void;
+  /** Numbered dots for saved points, flat `[x1, y1, x2, y2, ...]` in screen pixels. */
+  setPointDots(flat: number[]): void;
+  /** `onFloatingAction` fires with `{ action }` when a bar button is pressed. */
   addListener(
     event: 'onFloatingAction',
-    listener: (e: { action: 'toggle' | 'close' }) => void,
+    listener: (e: { action: 'toggle' | 'pick' | 'close' }) => void,
+  ): { remove(): void };
+  /** `onPointPicker` fires on "Lưu" (`save`, with the crosshair centre) and "Xong" (`done`). */
+  addListener(
+    event: 'onPointPicker',
+    listener: (e: { action: 'save' | 'done'; x: number; y: number }) => void,
   ): { remove(): void };
 }
 

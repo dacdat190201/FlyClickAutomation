@@ -38,7 +38,7 @@ Implemented in `modules/fly-click-accessibility` (a local Expo module, autolinke
 - `FlyClickAccessibilityModule.kt`: JS bridge (`isServiceEnabled`, `openAccessibilitySettings`, `tap`). One gesture at a time.
 - `AndroidManifest.xml` and `res/xml/fly_click_accessibility_service_config.xml`: service declaration (merged into the app manifest).
 
-The service subscribes to **no events** (`typeNone`) and sets `canRetrieveWindowContent="false"`: it cannot read the screen. `isAccessibilityTool` is deliberately **not** set.
+The service can read the text of the window in front (`canRetrieveWindowContent="true"`, used by `src/auto`, see docs/auto-registration.md) and listens only to window-change events. `isAccessibilityTool` is deliberately **not** set.
 
 **Requires:** a development build or production build (not Expo Go) and the user enabling the service in *Settings → Accessibility*. An app cannot enable it itself; the adapter reports `action: 'enable-accessibility-service'` and `openAccessibilitySettings()` takes the user there.
 

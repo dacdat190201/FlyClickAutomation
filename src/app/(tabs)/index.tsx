@@ -1,5 +1,4 @@
-import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -7,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { TimerPanel } from '@/components/timer-panel';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
+import { AutoConfigCard } from '@/components/auto-config-card';
 import { Screen } from '@/components/ui/screen';
-import { MOCK_TARGETS } from '@/data/mock';
+import { useAutoRunner, type StartFailure } from '@/hooks/use-auto-runner';
 import { useFloatingControls } from '@/hooks/use-floating-controls';
 import { useTheme } from '@/hooks/use-theme';
 import { useHistory } from '@/providers/app-providers';
@@ -16,16 +16,29 @@ import type { IconName } from '@/components/ui/icon';
 
 export default function HomeScreen() {
   const theme = useTheme();
-  const router = useRouter();
-  const [running, setRunning] = useState(false);
   const { summary } = useHistory();
+  const auto = useAutoRunner();
+  const { running } = auto;
+
+  const begin = useCallback(async () => {
+    const failure: StartFailure = await auto.start();
+    if (failure === 'service-off') {
+      Alert.alert('Chưa bật dịch vụ', 'Hãy bật FlyClick trong Cài đặt → Trợ năng, rồi thử lại.', [
+        { text: 'Để sau', style: 'cancel' },
+        { text: 'Mở Cài đặt', onPress: auto.openAccessibilitySettings },
+      ]);
+    } else if (failure === 'no-points') {
+      Alert.alert('Chưa có điểm click', 'Bấm "Chọn điểm" (hoặc nút ◎ trên thanh nổi) để chọn vị trí cần click.');
+    } else if (failure === 'unsupported') {
+      Alert.alert('Không hỗ trợ', 'Tính năng này chỉ chạy trên Android (bản development build).');
+    }
+  }, [auto]);
 
   const floating = useFloatingControls({
     running,
-    onToggle: useCallback(() => setRunning((r) => !r), []),
+    onToggle: useCallback(() => (running ? auto.stop() : void begin()), [running, auto, begin]),
+    onPick: useCallback(() => void auto.togglePicker(), [auto]),
   });
-
-  const activeTargets = MOCK_TARGETS.filter((t) => t.enabled);
 
   return (
     <Screen title="FlyClick" subtitle="Bảng điều khiển tự động hóa">
@@ -46,7 +59,9 @@ export default function HomeScreen() {
           {running ? 'Tự động hóa đang hoạt động' : 'Sẵn sàng bắt đầu'}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          {activeTargets.length} mục tiêu đang bật · chế độ demo, chưa gửi click thật
+          {auto.config.mode === 'points'
+            ? `${auto.config.points.length} điểm click · ${auto.config.pointRounds === 0 ? 'lặp đến khi dừng' : `${auto.config.pointRounds} vòng`}`
+            : `${auto.config.tabs.length} tab · tìm “${auto.config.targetKeywords.join(', ')}” rồi bấm cho đến khi thành “${auto.config.successKeywords.join(', ')}”`}
         </ThemedText>
       </Card>
 
@@ -56,7 +71,7 @@ export default function HomeScreen() {
           icon="play"
           size="xl"
           disabled={running}
-          onPress={() => setRunning(true)}
+          onPress={begin}
           style={styles.flex}
         />
         <Button
@@ -65,7 +80,7 @@ export default function HomeScreen() {
           size="xl"
           variant="danger"
           disabled={!running}
-          onPress={() => setRunning(false)}
+          onPress={auto.stop}
           style={styles.flex}
         />
       </View>
@@ -89,25 +104,16 @@ export default function HomeScreen() {
         <StatCard icon="error" label="Click lỗi" value={String(summary.failedClicks)} />
       </View>
 
-      <Card>
-        <View style={styles.cardHeader}>
-          <ThemedText type="default" style={styles.bold}>
-            Mục tiêu đang bật
-          </ThemedText>
-          <Button title="Quản lý" variant="secondary" onPress={() => router.navigate('/targets')} />
-        </View>
-        {activeTargets.map((t) => (
-          <View key={t.id} style={styles.targetRow}>
-            <Icon name="target" color={theme.primary} size={20} />
-            <ThemedText type="default" style={styles.flex}>
-              {t.name}
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              mỗi {t.intervalMs} ms
-            </ThemedText>
-          </View>
-        ))}
-      </Card>
+      <AutoConfigCard
+        key={auto.loaded ? 'ready' : 'loading'}
+        config={auto.config}
+        onChange={auto.setConfig}
+        running={running}
+        progress={auto.progress}
+        result={auto.result}
+        pickerOpen={auto.pickerOpen}
+        onTogglePicker={() => void auto.togglePicker()}
+      />
 
       <TimerPanel />
     </Screen>
@@ -139,7 +145,6 @@ function StatCard({
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  bold: { fontWeight: '700' },
   statusCard: { alignItems: 'flex-start', paddingVertical: 20 },
   pill: {
     flexDirection: 'row',
@@ -155,6 +160,4 @@ const styles = StyleSheet.create({
   stats: { flexDirection: 'row', gap: 12 },
   statCard: { flex: 1, padding: 14, gap: 6 },
   statValue: { fontSize: 22, lineHeight: 28 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  targetRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
 });

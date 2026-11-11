@@ -5,7 +5,6 @@ import { useTheme } from '@/hooks/use-theme';
 
 const TABS: { name: string; title: string; icon: IconName }[] = [
   { name: 'index', title: 'Trang chủ', icon: 'home' },
-  { name: 'targets', title: 'Mục tiêu', icon: 'target' },
   { name: 'text', title: 'Văn bản', icon: 'text' },
   { name: 'logs', title: 'Lịch sử', icon: 'logs' },
   { name: 'settings', title: 'Cài đặt', icon: 'settings' },

@@ -15,13 +15,15 @@ import android.widget.TextView
 /**
  * A small vertical control bar drawn above other apps through the accessibility service
  * (TYPE_ACCESSIBILITY_OVERLAY), so no "draw over other apps" permission is needed.
- * It can be dragged; it has a play/pause toggle and a close button. All calls: main thread.
+ * It can be dragged; it has a play/pause toggle, a button that opens the point picker, and a close button. All calls: main thread.
  */
 class FloatingControls(private val service: AccessibilityService) {
 
   private val windowManager = service.getSystemService(AccessibilityService.WINDOW_SERVICE) as WindowManager
   private var root: DraggableBar? = null
   private var playButton: TextView? = null
+  private var statusView: TextView? = null
+  private var status = "0"
   private var params: WindowManager.LayoutParams? = null
 
   /** Last position, kept so the bar reappears where the user left it. */
@@ -61,9 +63,22 @@ class FloatingControls(private val service: AccessibilityService) {
         setOnClickListener { onAction(action) }
       }
 
+    val counter = TextView(service).apply {
+      text = status
+      textSize = 13f
+      setTextColor(Color.WHITE)
+      typeface = android.graphics.Typeface.DEFAULT_BOLD
+      gravity = Gravity.CENTER
+      contentDescription = "Click count"
+      layoutParams = LinearLayout.LayoutParams(dp(44), LinearLayout.LayoutParams.WRAP_CONTENT)
+    }
+    bar.addView(counter)
+
     val play = button(if (playing) "⏸" else "▶", "Start or pause", "toggle")
+    val pick = button("◎", "Choose click points", "pick")
     val close = button("✕", "Close controls", "close")
     bar.addView(play)
+    bar.addView(pick)
     bar.addView(close)
 
     val lp = WindowManager.LayoutParams(
@@ -94,6 +109,7 @@ class FloatingControls(private val service: AccessibilityService) {
     windowManager.addView(bar, lp)
     root = bar
     playButton = play
+    statusView = counter
     params = lp
   }
 
@@ -101,15 +117,22 @@ class FloatingControls(private val service: AccessibilityService) {
     playButton?.text = if (playing) "⏸" else "▶"
   }
 
+  /** Short text shown above the buttons, e.g. the number of clicks so far. */
+  fun setStatus(text: String) {
+    status = text
+    statusView?.text = text
+  }
+
   fun hide() {
     root?.let { runCatching { windowManager.removeView(it) } }
     root = null
     playButton = null
+    statusView = null
     params = null
   }
 
   /** Lets child buttons receive clicks, but takes over once the finger moves: then it drags. */
-  private class DraggableBar(context: android.content.Context) : LinearLayout(context) {
+  internal class DraggableBar(context: android.content.Context) : LinearLayout(context) {
     var onDrag: ((Int, Int) -> Unit)? = null
     private val slop = ViewConfiguration.get(context).scaledTouchSlop
     private var downX = 0f

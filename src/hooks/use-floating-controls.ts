@@ -6,6 +6,8 @@ type Options = {
   /** Whether automation is currently running (drives the play/pause icon). */
   running: boolean;
   onToggle: () => void;
+  /** The "choose points" button on the bar. */
+  onPick?: () => void;
 };
 
 /**
@@ -13,10 +15,12 @@ type Options = {
  * `show()` resolves false when unavailable (no native module, or accessibility service is off).
  * The bar is removed when the component unmounts.
  */
-export function useFloatingControls({ running, onToggle }: Options) {
+export function useFloatingControls({ running, onToggle, onPick }: Options) {
   const native = useRef(loadAndroidNativeModule()).current;
   const toggleRef = useRef(onToggle);
   toggleRef.current = onToggle;
+  const pickRef = useRef(onPick);
+  pickRef.current = onPick;
   const visible = useRef(false);
 
   const hide = useCallback(() => {
@@ -28,6 +32,7 @@ export function useFloatingControls({ running, onToggle }: Options) {
     if (!native) return;
     const sub = native.addListener('onFloatingAction', ({ action }) => {
       if (action === 'toggle') toggleRef.current();
+      else if (action === 'pick') pickRef.current?.();
       else hide();
     });
     return () => {

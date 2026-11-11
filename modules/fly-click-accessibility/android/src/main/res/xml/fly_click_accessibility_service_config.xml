@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Data minimisation: the service listens to NO accessibility events and does NOT read window
-  content. It can only perform the tap gestures this app asks for.
+  Personal-use auto-clicker. The service can read the text of the window in front (to find
+  buttons such as "Đăng ký") and perform tap gestures. It listens to window changes only so that
+  Android keeps the window content available; it never stores or sends what it reads.
   `isAccessibilityTool` is deliberately not set: this is not an assistive technology.
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-  android:accessibilityEventTypes="typeNone"
+  android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
   android:accessibilityFeedbackType="feedbackGeneric"
+  android:accessibilityFlags="flagIncludeNotImportantViews|flagReportViewIds"
   android:canPerformGestures="true"
-  android:canRetrieveWindowContent="false"
+  android:canRetrieveWindowContent="true"
   android:description="@string/fly_click_service_description"
   android:notificationTimeout="100" />
