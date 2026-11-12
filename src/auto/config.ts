@@ -43,6 +43,7 @@ export async function loadAutoConfig(store: KeyValueStore): Promise<AutoConfig> 
       targetKeywords: strings(v.targetKeywords, d.targetKeywords),
       successKeywords: strings(v.successKeywords, d.successKeywords),
       maxRetriesPerTarget: num(v.maxRetriesPerTarget, d.maxRetriesPerTarget, 0),
+      loadWaitMs: num(v.loadWaitMs, d.loadWaitMs, 0),
       keepWatching: typeof v.keepWatching === 'boolean' ? v.keepWatching : d.keepWatching,
       maxRunMs: d.maxRunMs,
       maxClicks: d.maxClicks,

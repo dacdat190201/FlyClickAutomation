@@ -44,7 +44,10 @@ export function findTab(nodes: ScreenNode[], label: string): ScreenNode | undefi
   const want = norm(label);
   const exact = nodes.find((n) => norm(n.text) === want);
   if (exact) return exact;
-  return nodes.find((n) => norm(n.text).includes(want) && n.text.length <= label.length + 8);
+  // "Thứ 2 12/11", "Thứ 2 (3/3)"...: the label as a whole word, with a date or count around it.
+  const escaped = want.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const whole = new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}($|[^\\p{L}\\p{N}])`, 'u');
+  return nodes.find((n) => n.text.length <= 60 && whole.test(norm(n.text)));
 }
 
 /**
@@ -97,6 +100,9 @@ export async function runAutomation(
    * Clicks every node in one go: one gesture (up to 20 taps) when the platform supports it, so the
    * pace is set by `clickIntervalMs` and not by bridge round trips.
    */
+  // Taps per gesture. A finger on the screen cancels injected gestures, so after a cancel use
+  // tiny gestures (they fit between your own touches) and grow back once they succeed.
+  let seqMax = MAX_SEQUENCE;
   const clickAll = async (nodes: ScreenNode[]) => {
     if (clicks + nodes.length > config.maxClicks) throw new Stop('failed', 'MAX_CLICKS');
     const centers = nodes.map(center);
@@ -106,9 +112,10 @@ export async function runAutomation(
         // Fast: batched gestures. Markers can only be refreshed once per batch.
         nodes.forEach((_, i) => deps.onTap?.(clicks + i + 1, centers[i].x, centers[i].y, size(i)));
         clicks += nodes.length;
-        for (let i = 0; i < centers.length; i += MAX_SEQUENCE) {
-          const chunk = centers.slice(i, i + MAX_SEQUENCE);
+        for (let i = 0; i < centers.length; i += seqMax) {
+          const chunk = centers.slice(i, i + seqMax);
           await deps.tapSequence(chunk.flatMap((c) => [c.x, c.y]), chunk.length, config.clickIntervalMs);
+          seqMax = Math.min(MAX_SEQUENCE, seqMax * 2);
         }
       } else {
         // Slow enough to show every click: one tap at a time, marker right before each.
@@ -121,6 +128,7 @@ export async function runAutomation(
       }
     } catch (e) {
       if (e instanceof Stop) throw e; // stop / time limit raised by wait() must not be swallowed
+      seqMax = 1;
       // A refused or cancelled gesture did not click; the next round re-checks the screen.
       progress(`Click không thực hiện được: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -191,12 +199,15 @@ export async function runAutomation(
   };
 
   try {
+    // With keepWatching the walk over the tabs repeats until stopped: a tab that showed no buttons
+    // because its data was still loading gets another look on the next pass.
+    for (let pass = 0; pass === 0 || config.keepWatching; pass++)
     for (tabIndex = 0; tabIndex < tabs.length; tabIndex++) {
       const tab = tabs[tabIndex];
       tab.status = 'running';
-      progress(`Tab ${tab.name}`);
+      progress(`Tab ${tab.name}${pass > 0 ? ` (lượt ${pass + 1})` : ''}`);
 
-      if (tabIndex > 0 && !(await openTab(tabIndex))) {
+      if ((tabIndex > 0 || pass > 0) && !(await openTab(tabIndex))) {
         tab.status = 'failed';
         for (const rest of tabs.slice(tabIndex + 1)) rest.status = 'not-reached';
         progress(`Không tìm thấy tab ${tab.name}`);
@@ -205,10 +216,10 @@ export async function runAutomation(
 
       // Buttons clicked and not yet gone / turned into "Đã đăng ký".
       const pending = new Set<string>();
-      let emptyScans = 0;
-      // On the last tab, keep watching: new buttons (e.g. after you switch tabs yourself) get clicked too.
-      const watching = config.keepWatching && tabIndex === tabs.length - 1;
-      while (watching || emptyScans < 2) {
+      // The tab counts as finished only after it has shown no button for `loadWaitMs` in a row,
+      // so a list that is still loading from the server is not mistaken for an empty one.
+      let emptySince: number | null = null;
+      for (;;) {
         const snap = await read();
         const byKey = new Map<string, ScreenNode>();
         for (const n of snap.nodes) if (isTarget(n) && !byKey.has(keyOf(n))) byKey.set(keyOf(n), n);
@@ -219,13 +230,13 @@ export async function runAutomation(
           }
         }
         if (byKey.size === 0) {
-          // Confirm twice: the list may still be loading or redrawing after the last click.
-          emptyScans++;
-          if (watching) progress('Đang theo dõi, chờ nút mới…');
+          emptySince ??= deps.now();
+          if (deps.now() - emptySince >= config.loadWaitMs) break;
+          progress(`Chờ dữ liệu ${tab.name}…`);
           await wait(Math.max(config.settleMs, config.pollMs));
           continue;
         }
-        emptyScans = 0;
+        emptySince = null;
         for (const k of byKey.keys()) pending.add(k);
         progress(`Click ${byKey.size} nút trong ${tab.name}`);
         // Click everything that is on screen, over and over, until the buttons are gone.
@@ -295,12 +306,13 @@ export async function runPoints(
     }
   };
 
+  let cap = perBatch; // shrinks after a cancelled gesture, grows back after successes
   while (clicks < limit) {
     // Checking the screen costs time, so do it once per batch rather than per tap.
     if (!(await inOtherApp()) || signal.aborted) return result('stopped', 'USER_STOPPED');
     const start = clicks % n;
     const useSeq = !!deps.tapSequence && config.pointIntervalMs < SLOW_MS;
-    const count = useSeq ? Math.min(perBatch, limit - clicks) : 1;
+    const count = useSeq ? Math.min(cap, limit - clicks) : 1;
     const batch = Array.from({ length: count }, (_, i) => points[(start + i) % n]);
     for (let i = 0; i < Math.min(count, n); i++) deps.onTap?.(clicks + i + 1, batch[i].x, batch[i].y, 0);
     try {
@@ -310,9 +322,11 @@ export async function runPoints(
         await deps.tap(batch[0].x, batch[0].y);
       }
       clicks += count;
+      cap = Math.min(perBatch, cap * 2);
       progress(`Vòng ${Math.floor((clicks - 1) / n) + 1}`);
     } catch (e) {
-      // Android cancels injected taps while a finger is on the screen: just try again shortly.
+      // Android cancels injected taps while a finger is on the screen: retry with tiny gestures.
+      cap = 1;
       progress(`Chờ bạn thả tay / Android hủy chạm: ${e instanceof Error ? e.message : String(e)}`);
       await deps.sleep(30, signal);
     }

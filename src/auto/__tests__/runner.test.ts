@@ -1,4 +1,4 @@
-import { DEFAULT_AUTO_CONFIG, runAutomation, runPoints, type AutoConfig, type RunnerDeps, type ScreenNode } from '..';
+import { DEFAULT_AUTO_CONFIG, findTab, runAutomation, runPoints, type AutoConfig, type RunnerDeps, type ScreenNode } from '..';
 
 type Btn = { y: number; done: boolean; tapsNeeded: number; taps: number };
 
@@ -52,6 +52,7 @@ const cfg = (over: Partial<AutoConfig> = {}): AutoConfig => ({
   ...DEFAULT_AUTO_CONFIG,
   tabs: ['Thứ 2', 'Thứ 3'],
   keepWatching: false,
+  loadWaitMs: 100,
   ...over,
 });
 
@@ -146,6 +147,16 @@ describe('runAutomation', () => {
 
     expect(result).toMatchObject({ status: 'partial', reason: 'TAB_NOT_FOUND' });
     expect(app.swipes()).toBeLessThan(20);
+  });
+});
+
+describe('findTab', () => {
+  const n = (text: string): ScreenNode => ({ text, x: 0, y: 0, w: 100, h: 40, clickable: true });
+  it('finds a tab whose text also holds a date or a count', () => {
+    const nodes = [n('Thứ 20'), n('Thứ 2 - 10/11/2026 (0/3)'), n('Thứ 3')];
+    expect(findTab(nodes, 'Thứ 2')).toBe(nodes[1]);
+    expect(findTab([n('Chủ nhật 15/11')], 'Chủ nhật')).toBeDefined();
+    expect(findTab([n('Thứ 20')], 'Thứ 2')).toBeUndefined();
   });
 });
 
