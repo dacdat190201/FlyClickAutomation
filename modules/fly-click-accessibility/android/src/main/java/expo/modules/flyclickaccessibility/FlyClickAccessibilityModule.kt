@@ -28,6 +28,28 @@ class FlyClickAccessibilityModule : Module() {
   private val gestureInFlight = AtomicBoolean(false)
   private val mainHandler = Handler(Looper.getMainLooper())
 
+  /**
+   * Wraps the gesture callback so the promise settles exactly once and the busy flag is always
+   * released. A touch on the screen can interrupt an injected gesture and, on some devices, no
+   * callback arrives at all; the watchdog then reports "cancelled" so the caller can carry on.
+   */
+  private fun settleOnce(expectedMs: Long, promise: Promise): (FlyClickAccessibilityService.TapOutcome) -> Unit {
+    val done = AtomicBoolean(false)
+    val settle = { outcome: FlyClickAccessibilityService.TapOutcome ->
+      if (done.compareAndSet(false, true)) {
+        gestureInFlight.set(false)
+        when (outcome) {
+          FlyClickAccessibilityService.TapOutcome.COMPLETED -> promise.resolve(true)
+          FlyClickAccessibilityService.TapOutcome.CANCELLED -> promise.resolve(false)
+          FlyClickAccessibilityService.TapOutcome.REJECTED ->
+            promise.reject("ERR_DISPATCH_REJECTED", "Android did not accept the gesture.", null)
+        }
+      }
+    }
+    mainHandler.postDelayed({ settle(FlyClickAccessibilityService.TapOutcome.CANCELLED) }, expectedMs + 700)
+    return settle
+  }
+
   override fun definition() = ModuleDefinition {
     Name("FlyClickAccessibility")
 
@@ -115,15 +137,8 @@ class FlyClickAccessibilityModule : Module() {
         return@AsyncFunction
       }
       mainHandler.post {
-        service.performTapSequence(flat, count, durationMs.toLong(), gapMs.toLong()) { outcome ->
-          gestureInFlight.set(false)
-          when (outcome) {
-            FlyClickAccessibilityService.TapOutcome.COMPLETED -> promise.resolve(true)
-            FlyClickAccessibilityService.TapOutcome.CANCELLED -> promise.resolve(false)
-            FlyClickAccessibilityService.TapOutcome.REJECTED ->
-              promise.reject("ERR_DISPATCH_REJECTED", "Android did not accept the gesture.", null)
-          }
-        }
+        val total = count * (durationMs.toLong() + gapMs.toLong())
+        service.performTapSequence(flat, count, durationMs.toLong(), gapMs.toLong(), settleOnce(total, promise))
       }
     }
 
@@ -172,15 +187,10 @@ class FlyClickAccessibilityModule : Module() {
         return@AsyncFunction
       }
       mainHandler.post {
-        service.performSwipe(x1.toFloat(), y1.toFloat(), x2.toFloat(), y2.toFloat(), durationMs.toLong()) { outcome ->
-          gestureInFlight.set(false)
-          when (outcome) {
-            FlyClickAccessibilityService.TapOutcome.COMPLETED -> promise.resolve(true)
-            FlyClickAccessibilityService.TapOutcome.CANCELLED -> promise.resolve(false)
-            FlyClickAccessibilityService.TapOutcome.REJECTED ->
-              promise.reject("ERR_DISPATCH_REJECTED", "Android did not accept the gesture.", null)
-          }
-        }
+        service.performSwipe(
+          x1.toFloat(), y1.toFloat(), x2.toFloat(), y2.toFloat(), durationMs.toLong(),
+          settleOnce(durationMs.toLong(), promise),
+        )
       }
     }
 
@@ -213,15 +223,7 @@ class FlyClickAccessibilityModule : Module() {
 
       // dispatchGesture is invoked on the main thread, as the framework expects.
       mainHandler.post {
-        service.performTap(x.toFloat(), y.toFloat(), durationMs.toLong()) { outcome ->
-          gestureInFlight.set(false)
-          when (outcome) {
-            FlyClickAccessibilityService.TapOutcome.COMPLETED -> promise.resolve(true)
-            FlyClickAccessibilityService.TapOutcome.CANCELLED -> promise.resolve(false)
-            FlyClickAccessibilityService.TapOutcome.REJECTED ->
-              promise.reject("ERR_DISPATCH_REJECTED", "Android did not accept the gesture.", null)
-          }
-        }
+        service.performTap(x.toFloat(), y.toFloat(), durationMs.toLong(), settleOnce(durationMs.toLong(), promise))
       }
     }
   }

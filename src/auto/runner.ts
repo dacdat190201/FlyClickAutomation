@@ -206,7 +206,9 @@ export async function runAutomation(
       // Buttons clicked and not yet gone / turned into "Đã đăng ký".
       const pending = new Set<string>();
       let emptyScans = 0;
-      while (emptyScans < 2) {
+      // On the last tab, keep watching: new buttons (e.g. after you switch tabs yourself) get clicked too.
+      const watching = config.keepWatching && tabIndex === tabs.length - 1;
+      while (watching || emptyScans < 2) {
         const snap = await read();
         const byKey = new Map<string, ScreenNode>();
         for (const n of snap.nodes) if (isTarget(n) && !byKey.has(keyOf(n))) byKey.set(keyOf(n), n);
@@ -219,6 +221,7 @@ export async function runAutomation(
         if (byKey.size === 0) {
           // Confirm twice: the list may still be loading or redrawing after the last click.
           emptyScans++;
+          if (watching) progress('Đang theo dõi, chờ nút mới…');
           await wait(Math.max(config.settleMs, config.pollMs));
           continue;
         }
@@ -309,9 +312,9 @@ export async function runPoints(
       clicks += count;
       progress(`Vòng ${Math.floor((clicks - 1) / n) + 1}`);
     } catch (e) {
-      clicks += count;
-      progress(`Click không thực hiện được: ${e instanceof Error ? e.message : String(e)}`);
-      await deps.sleep(50, signal); // do not spin hot on a persistent error
+      // Android cancels injected taps while a finger is on the screen: just try again shortly.
+      progress(`Chờ bạn thả tay / Android hủy chạm: ${e instanceof Error ? e.message : String(e)}`);
+      await deps.sleep(30, signal);
     }
     // With tapSequence the gap is already inside the gesture.
     if (!useSeq && config.pointIntervalMs > 0) await deps.sleep(config.pointIntervalMs, signal);

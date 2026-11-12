@@ -51,6 +51,7 @@ function simApp(tabs: Record<string, number[]>, opts: { pkg?: string; flaky?: nu
 const cfg = (over: Partial<AutoConfig> = {}): AutoConfig => ({
   ...DEFAULT_AUTO_CONFIG,
   tabs: ['Thứ 2', 'Thứ 3'],
+  keepWatching: false,
   ...over,
 });
 
@@ -145,6 +146,23 @@ describe('runAutomation', () => {
 
     expect(result).toMatchObject({ status: 'partial', reason: 'TAB_NOT_FOUND' });
     expect(app.swipes()).toBeLessThan(20);
+  });
+});
+
+describe('keepWatching', () => {
+  it('keeps clicking new buttons on the last tab until stopped', async () => {
+    const app = simApp({ 'Thứ 2': [200], 'Thứ 3': [200] });
+    const abort = new AbortController();
+    const base = app.deps.sleep;
+    let idle = 0;
+    app.deps.sleep = async (ms, s) => {
+      // Once everything is registered, "the user" switches tabs by hand twice, then stops.
+      if (app.buttons['Thứ 3'][0].done && ++idle === 3) abort.abort();
+      await base(ms, s);
+    };
+    const r = await runAutomation(app.deps, cfg({ keepWatching: true }), abort.signal);
+    expect(r).toMatchObject({ status: 'stopped', reason: 'USER_STOPPED' });
+    expect(app.buttons['Thứ 3'][0].done).toBe(true);
   });
 });
 

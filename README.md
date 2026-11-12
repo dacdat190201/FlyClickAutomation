@@ -58,3 +58,7 @@ Join our community of developers creating universal apps.
 npx expo install expo-dev-client
 npx eas-cli@latest login
 npx eas-cli@latest build --profile development --platform android
+
+npx eas-cli@latest build -p android --profile preview --non-interactive --wait
+
+câu lệnh build

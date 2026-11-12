@@ -29,6 +29,23 @@ function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
+/** A native gesture that never answers must not freeze the run: give up after `ms`. */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Chạm không phản hồi')), ms);
+    promise.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    );
+  });
+}
+
 export type StartFailure = 'unsupported' | 'service-off' | 'no-points' | null;
 
 const flatten = (points: ClickPoint[]) => points.flatMap((p) => [p.x, p.y]);
@@ -141,13 +158,14 @@ export function useAutoRunner() {
     const deps: RunnerDeps = {
       snapshot: () => native.snapshot(),
       tap: async (x, y) => {
-        if (!(await native.tap(x, y, configRef.current.tapMs))) throw new Error('Android đã hủy thao tác chạm');
+        if (!(await withTimeout(native.tap(x, y, configRef.current.tapMs), configRef.current.tapMs + 1500))) throw new Error('Android đã hủy thao tác chạm');
       },
       swipe: async (x1, y1, x2, y2) => {
         if (!(await native.swipe(x1, y1, x2, y2, 300))) throw new Error('Android đã hủy thao tác vuốt');
       },
       tapSequence: async (flat, count, gapMs) => {
-        if (!(await native.tapSequence(flat, count, configRef.current.tapMs, gapMs))) {
+        const expected = count * (configRef.current.tapMs + gapMs);
+        if (!(await withTimeout(native.tapSequence(flat, count, configRef.current.tapMs, gapMs), expected + 1500))) {
           throw new Error('Android đã hủy thao tác chạm');
         }
       },

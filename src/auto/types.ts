@@ -23,6 +23,8 @@ export type AutoConfig = {
   successKeywords: string[];
   /** Extra attempts per button after the first one. */
   maxRetriesPerTarget: number;
+  /** After the last tab keep scanning and clicking until stopped (you may switch tabs yourself). */
+  keepWatching: boolean;
   /** Hard limits so a run always ends. */
   maxRunMs: number;
   maxClicks: number;
@@ -65,7 +67,8 @@ export const DEFAULT_AUTO_CONFIG: AutoConfig = {
   targetKeywords: ['Đăng ký'],
   successKeywords: ['Đã đăng ký'],
   maxRetriesPerTarget: 5,
-  maxRunMs: 10 * 60_000,
+  keepWatching: true,
+  maxRunMs: 4 * 60 * 60_000,
   maxClicks: 1_000_000,
   ...SPEED_PRESETS.fast,
   showMarkers: true,

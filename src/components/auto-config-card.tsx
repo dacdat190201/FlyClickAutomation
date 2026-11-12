@@ -213,6 +213,14 @@ export function AutoConfigCard({ config, onChange, running, progress, result, pi
           />
         </>
       )}
+      {config.mode === 'register' && (
+        <SwitchRow
+          label="Theo dõi liên tục"
+          description="Xong các tab vẫn tiếp tục quét và bấm nút mới (vd khi bạn tự chuyển tab) cho đến khi bấm Dừng."
+          value={config.keepWatching}
+          onValueChange={(v) => onChange({ ...config, keepWatching: v })}
+        />
+      )}
       <SwitchRow
         label="Hiện điểm chạm"
         description="Vòng đỏ kèm số thứ tự lần click hiện ngay tại chỗ được bấm."
