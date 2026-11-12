@@ -60,9 +60,9 @@ class FlyClickAccessibilityService : AccessibilityService() {
   private var marker: TapMarker? = null
 
   /** Flashes a ring with [label] at screen pixel (x, y). Main thread only. */
-  fun showTapMarker(x: Int, y: Int, label: String) {
+  fun showTapMarker(x: Int, y: Int, label: String, sizePx: Int) {
     val m = marker ?: TapMarker(this).also { marker = it }
-    m.show(x, y, label)
+    m.show(x, y, label, sizePx)
   }
 
   override fun onUnbind(intent: android.content.Intent?): Boolean {
@@ -137,6 +137,29 @@ class FlyClickAccessibilityService : AccessibilityService() {
     if (!dispatchGesture(gesture, callback, null)) {
       onResult(TapOutcome.REJECTED)
     }
+  }
+
+  /**
+   * Dispatches several taps as ONE gesture: stroke i taps point `i % points` at i * (duration + gap) ms.
+   * No JavaScript round trip between taps, so cadence is exact even at a few ms. [flat] is x1,y1,x2,y2...
+   */
+  fun performTapSequence(
+    flat: List<Double>, count: Int, durationMs: Long, gapMs: Long, onResult: (TapOutcome) -> Unit,
+  ) {
+    val n = flat.size / 2
+    val builder = GestureDescription.Builder()
+    val step = durationMs + gapMs
+    for (i in 0 until count) {
+      val px = flat[(i % n) * 2].toFloat()
+      val py = flat[(i % n) * 2 + 1].toFloat()
+      val path = Path().apply { moveTo(px, py) }
+      builder.addStroke(GestureDescription.StrokeDescription(path, i * step, durationMs))
+    }
+    val callback = object : AccessibilityService.GestureResultCallback() {
+      override fun onCompleted(gestureDescription: GestureDescription?) = onResult(TapOutcome.COMPLETED)
+      override fun onCancelled(gestureDescription: GestureDescription?) = onResult(TapOutcome.CANCELLED)
+    }
+    if (!dispatchGesture(builder.build(), callback, null)) onResult(TapOutcome.REJECTED)
   }
 
   /** Dispatches a straight swipe (used to scroll a tab bar). [onResult] is called once, main thread. */

@@ -77,6 +77,16 @@ describe('runAutomation', () => {
     expect(app.buttons['Thứ 2'][0].taps).toBe(2);
   });
 
+  it('clicks every button on screen again and again, not just one once', async () => {
+    const app = simApp({ 'Thứ 2': [200, 300, 400], 'Thứ 3': [] });
+    for (const b of app.buttons['Thứ 2']) b.tapsNeeded = 3;
+    const result = await runAutomation(app.deps, cfg(), new AbortController().signal);
+
+    expect(result.status).toBe('completed');
+    expect(app.buttons['Thứ 2'].map((b) => b.taps)).toEqual([3, 3, 3]);
+    expect(result.tabs[0].registered).toBe(3);
+  });
+
   it('never clicks a button that already says "Đã đăng ký"', async () => {
     const app = simApp({ 'Thứ 2': [200], 'Thứ 3': [] });
     app.buttons['Thứ 2'][0].done = true;
@@ -84,16 +94,6 @@ describe('runAutomation', () => {
 
     expect(result.status).toBe('completed');
     expect(app.buttons['Thứ 2'][0].taps).toBe(0);
-  });
-
-  it('gives up on a button that never changes, and ends partial', async () => {
-    const app = simApp({ 'Thứ 2': [200], 'Thứ 3': [] }, { flaky: [200] });
-    app.buttons['Thứ 2'][0].tapsNeeded = 999;
-    const result = await runAutomation(app.deps, cfg({ maxRetriesPerTarget: 2 }), new AbortController().signal);
-
-    expect(result.status).toBe('partial');
-    expect(result.tabs[0]).toMatchObject({ status: 'failed', failed: 1 });
-    expect(app.buttons['Thứ 2'][0].taps).toBe(3); // 1 try + 2 retries
   });
 
   it('stops with TAB_NOT_FOUND when the next tab is missing', async () => {
@@ -121,11 +121,11 @@ describe('runAutomation', () => {
   it('respects the time and click limits', async () => {
     const slow = simApp({ 'Thứ 2': [200], 'Thứ 3': [] });
     slow.buttons['Thứ 2'][0].tapsNeeded = 999;
-    expect((await runAutomation(slow.deps, cfg({ maxRunMs: 5000 }), new AbortController().signal)).status).toBe('timeout');
+    expect((await runAutomation(slow.deps, cfg({ maxRunMs: 5000, clickIntervalMs: 10 }), new AbortController().signal)).status).toBe('timeout');
 
     const many = simApp({ 'Thứ 2': [200], 'Thứ 3': [] });
     many.buttons['Thứ 2'][0].tapsNeeded = 999;
-    const r = await runAutomation(many.deps, cfg({ maxClicks: 3, maxRetriesPerTarget: 50 }), new AbortController().signal);
+    const r = await runAutomation(many.deps, cfg({ maxClicks: 3 }), new AbortController().signal);
     expect(r).toMatchObject({ status: 'failed', reason: 'MAX_CLICKS' });
   });
 
@@ -203,5 +203,24 @@ describe('runPoints', () => {
 
     const none = await runPoints(deps().d, { points: [], pointIntervalMs: 0, pointRounds: 1 }, new AbortController().signal);
     expect(none).toMatchObject({ status: 'failed', reason: 'NO_POINTS' });
+  });
+
+  it('sends taps in batches that cycle 1 -> 2 -> 1 without stopping', async () => {
+    const abort = new AbortController();
+    const seq: number[][] = [];
+    const { d } = deps({
+      tapSequence: async (flat: number[], count: number) => {
+        seq.push(flat.slice(0, count * 2));
+        if (seq.length === 3) abort.abort();
+      },
+    });
+    const r = await runPoints(d, { points, pointIntervalMs: 10, pointRounds: 0 }, abort.signal);
+
+    expect(r.status).toBe('stopped');
+    const xs = seq.flatMap((f) => f.filter((_, i) => i % 2 === 0));
+    expect(xs.slice(0, 5)).toEqual([100, 300, 100, 300, 100]);
+    // The next batch continues the cycle where the last one stopped.
+    const first = seq[0].length / 2;
+    expect(seq[1][0]).toBe(first % 2 === 0 ? 100 : 300);
   });
 });

@@ -12,6 +12,8 @@ import { loadAndroidNativeModule } from '@/click/native/android-native';
 import { useHistory } from '@/providers/app-providers';
 import { AsyncStorageKeyValueStore } from '@/storage/key-value-store';
 
+const UI_THROTTLE_MS = 100;
+
 const storage = new AsyncStorageKeyValueStore();
 
 function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
@@ -133,6 +135,8 @@ export function useAutoRunner() {
     setProgress(null);
     native.setFloatingStatus('0');
     const startedAt = Date.now();
+    let lastUi = 0;
+    let lastProgress = 0;
 
     const deps: RunnerDeps = {
       snapshot: () => native.snapshot(),
@@ -142,13 +146,29 @@ export function useAutoRunner() {
       swipe: async (x1, y1, x2, y2) => {
         if (!(await native.swipe(x1, y1, x2, y2, 300))) throw new Error('Android đã hủy thao tác vuốt');
       },
-      onTap: (count, x, y) => {
+      tapSequence: async (flat, count, gapMs) => {
+        if (!(await native.tapSequence(flat, count, configRef.current.tapMs, gapMs))) {
+          throw new Error('Android đã hủy thao tác chạm');
+        }
+      },
+      // Taps can come hundreds of times a second; the overlay and React only need ~10 updates/s.
+      onTap: (count, x, y, size) => {
+        const now = Date.now();
+        // Slow clicks (>= 100 ms apart) are all shown; faster ones refresh the overlay ~10x/s.
+        const delay = configRef.current.mode === 'points' ? configRef.current.pointIntervalMs : configRef.current.clickIntervalMs;
+        if (delay < 100 && now - lastUi < UI_THROTTLE_MS) return;
+        lastUi = now;
         native.setFloatingStatus(String(count));
-        if (configRef.current.showMarkers) native.showTapMarker(x, y, String(count));
+        if (configRef.current.showMarkers) native.showTapMarker(x, y, String(count), Math.round(size * 1.3));
       },
       sleep: abortableSleep,
       now: Date.now,
-      onProgress: setProgress,
+      onProgress: (p) => {
+        const now = Date.now();
+        if (now - lastProgress < UI_THROTTLE_MS * 2) return;
+        lastProgress = now;
+        setProgress(p);
+      },
     };
 
     try {

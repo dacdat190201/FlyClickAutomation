@@ -79,7 +79,7 @@ export function AutoConfigCard({ config, onChange, running, progress, result, pi
       {config.mode === 'register' && (
         <ThemedText type="small" themeColor="textSecondary">
           Mở app cần đăng ký (đang ở tab đầu), rồi bấm Bắt đầu trên thanh nổi. App tự tìm chữ trên màn hình,
-          bấm cho đến khi đổi thành chữ thành công, rồi sang tab kế.
+          bấm liên tục mọi nút tìm thấy (lặp theo số ms đặt) cho đến khi hết nút, rồi sang tab kế.
         </ThemedText>
       )}
 
@@ -87,7 +87,7 @@ export function AutoConfigCard({ config, onChange, running, progress, result, pi
         <>
           <ThemedText type="small" themeColor="textSecondary">
             Bấm “Chọn điểm” (hoặc nút ◎ trên thanh nổi), kéo dấu + tới chỗ cần click rồi bấm “Lưu”. Lặp lại cho các
-            điểm khác, bấm Xong. Khi chạy, app bấm lần lượt các điểm.
+            điểm khác, bấm Xong. Khi chạy, app bấm liên tục: điểm 1, 2, … rồi quay lại điểm 1, không dừng cho đến khi bấm Dừng.
           </ThemedText>
           <View style={styles.row}>
             <Button
@@ -130,18 +130,6 @@ export function AutoConfigCard({ config, onChange, running, progress, result, pi
           )}
 
           <View style={styles.row}>
-            <View style={styles.flex}>
-              <TextField
-                label="Nghỉ sau mỗi điểm (ms)"
-                keyboardType="number-pad"
-                value={interval}
-                editable={!running}
-                onChangeText={(v) => {
-                  setIntervalText(digits(v));
-                  onChange({ ...config, pointIntervalMs: Number(digits(v) || 0) });
-                }}
-              />
-            </View>
             <View style={styles.flex}>
               <TextField
                 label="Số vòng"
@@ -196,6 +184,22 @@ export function AutoConfigCard({ config, onChange, running, progress, result, pi
 
         </>
       )}
+
+      <TextField
+        label="Độ trễ giữa các lần click (ms) — vd 1, 10, 100"
+        keyboardType="number-pad"
+        value={interval}
+        editable={!running}
+        onChangeText={(v) => {
+          const ms = Number(digits(v) || 0);
+          setIntervalText(digits(v));
+          onChange({ ...config, pointIntervalMs: ms, clickIntervalMs: ms });
+        }}
+      />
+      <ThemedText type="small" themeColor="textSecondary">
+        Từ 100 ms trở lên mỗi lần click đều hiện vòng đỏ; dưới 100 ms click theo lô để nhanh nhất, vòng đỏ chỉ cập
+        nhật khoảng 10 lần/giây.
+      </ThemedText>
 
       {config.mode === 'register' && (
         <>

@@ -11,6 +11,8 @@ export type AutoConfig = {
   points: ClickPoint[];
   /** Pause after each point. */
   pointIntervalMs: number;
+  /** Register mode: pause between two rounds of clicking every matching button on screen. */
+  clickIntervalMs: number;
   /** Rounds through all points; 0 = until stopped. */
   pointRounds: number;
   /** Tab labels in order, e.g. ["Thứ 2", "Thứ 3"]. The first is assumed to be open already. */
@@ -56,14 +58,15 @@ export function speedOf(c: Pick<AutoConfig, 'settleMs' | 'verifyMs' | 'pollMs' |
 export const DEFAULT_AUTO_CONFIG: AutoConfig = {
   mode: 'register',
   points: [],
-  pointIntervalMs: 100,
-  pointRounds: 1,
+  pointIntervalMs: 10,
+  clickIntervalMs: 10,
+  pointRounds: 0,
   tabs: ['Thứ 2', 'Thứ 3'],
   targetKeywords: ['Đăng ký'],
   successKeywords: ['Đã đăng ký'],
   maxRetriesPerTarget: 5,
   maxRunMs: 10 * 60_000,
-  maxClicks: 500,
+  maxClicks: 1_000_000,
   ...SPEED_PRESETS.fast,
   showMarkers: true,
 };
@@ -95,7 +98,12 @@ export type RunnerDeps = {
   swipe(x1: number, y1: number, x2: number, y2: number): Promise<void>;
   sleep(ms: number, signal: AbortSignal): Promise<void>;
   now(): number;
-  /** Called right before every tap with the running click count. */
-  onTap?(count: number, x: number, y: number): void;
+  /**
+   * Several taps as one gesture (taps cycle through `flat` = x1,y1,x2,y2,...), `gapMs` apart.
+   * Optional: without it the runner falls back to one `tap` per click.
+   */
+  tapSequence?(flat: number[], count: number, gapMs: number): Promise<void>;
+  /** Called right before a tap with the running click count; `size` is the target's size in px (0 = unknown). */
+  onTap?(count: number, x: number, y: number, size: number): void;
   onProgress?(p: RunProgress): void;
 };

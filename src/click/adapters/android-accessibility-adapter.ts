@@ -41,7 +41,12 @@ export interface FlyClickNativeModule {
   /** Short text above the bar's buttons (e.g. the click count). */
   setFloatingStatus(text: string): void;
   /** Flashes a ring with `label` at screen pixel (x, y) so taps are visible. Not touchable. */
-  showTapMarker(x: number, y: number, label: string): void;
+  showTapMarker(x: number, y: number, label: string, size: number): void;
+  /**
+   * Up to 20 taps in one gesture with no JS round trip between them; taps cycle through the
+   * points in `flat` ([x1, y1, x2, y2, ...]). Each is held `durationMs`, `gapMs` apart.
+   */
+  tapSequence(flat: number[], count: number, durationMs: number, gapMs: number): Promise<boolean>;
   /** Shows the crosshair picker (drag it, press "Lưu" to save a point). Resolves false if the service is off. */
   showPointPicker(): Promise<boolean>;
   hidePointPicker(): void;

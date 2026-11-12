@@ -20,18 +20,22 @@ class TapMarker(private val service: AccessibilityService) {
   private var view: TextView? = null
   private var params: WindowManager.LayoutParams? = null
 
-  fun show(x: Int, y: Int, label: String) {
+  /** [sizePx] > 0 sizes the ring to e.g. the clicked button; otherwise the default 44dp. */
+  fun show(x: Int, y: Int, label: String, sizePx: Int = 0) {
     val v = view ?: create()
     val lp = params ?: return
-    lp.x = x - size / 2
-    lp.y = y - size / 2
+    val s = if (sizePx > 0) maxOf(sizePx, size) else size
+    lp.width = s
+    lp.height = s
+    lp.x = x - s / 2
+    lp.y = y - s / 2
     v.text = label
     v.animate().cancel()
     v.alpha = 1f
-    v.scaleX = 0.6f
-    v.scaleY = 0.6f
+    v.scaleX = 0.85f
+    v.scaleY = 0.85f
     runCatching { windowManager.updateViewLayout(v, lp) }
-    v.animate().alpha(0f).scaleX(1.5f).scaleY(1.5f).setDuration(400).start()
+    v.animate().alpha(0f).scaleX(1.2f).scaleY(1.2f).setDuration(250).start()
   }
 
   private fun create(): TextView {

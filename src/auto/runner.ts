@@ -90,14 +90,38 @@ export async function runAutomation(
   };
 
   const tap = async (n: ScreenNode) => {
-    if (clicks >= config.maxClicks) throw new Stop('failed', 'MAX_CLICKS');
-    clicks++;
-    const { x, y } = center(n);
-    deps.onTap?.(clicks, x, y);
+    await clickAll([n]);
+  };
+
+  /**
+   * Clicks every node in one go: one gesture (up to 20 taps) when the platform supports it, so the
+   * pace is set by `clickIntervalMs` and not by bridge round trips.
+   */
+  const clickAll = async (nodes: ScreenNode[]) => {
+    if (clicks + nodes.length > config.maxClicks) throw new Stop('failed', 'MAX_CLICKS');
+    const centers = nodes.map(center);
+    const size = (i: number) => Math.max(nodes[i].w, nodes[i].h);
     try {
-      await deps.tap(x, y);
+      if (deps.tapSequence && config.clickIntervalMs < SLOW_MS) {
+        // Fast: batched gestures. Markers can only be refreshed once per batch.
+        nodes.forEach((_, i) => deps.onTap?.(clicks + i + 1, centers[i].x, centers[i].y, size(i)));
+        clicks += nodes.length;
+        for (let i = 0; i < centers.length; i += MAX_SEQUENCE) {
+          const chunk = centers.slice(i, i + MAX_SEQUENCE);
+          await deps.tapSequence(chunk.flatMap((c) => [c.x, c.y]), chunk.length, config.clickIntervalMs);
+        }
+      } else {
+        // Slow enough to show every click: one tap at a time, marker right before each.
+        for (let i = 0; i < centers.length; i++) {
+          clicks++;
+          deps.onTap?.(clicks, centers[i].x, centers[i].y, size(i));
+          await deps.tap(centers[i].x, centers[i].y);
+          if (i < centers.length - 1) await wait(config.clickIntervalMs);
+        }
+      }
     } catch (e) {
-      // A refused or cancelled gesture did not click; the caller re-checks the screen.
+      if (e instanceof Stop) throw e; // stop / time limit raised by wait() must not be swallowed
+      // A refused or cancelled gesture did not click; the next round re-checks the screen.
       progress(`Click không thực hiện được: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
@@ -166,27 +190,6 @@ export async function runAutomation(
     return false;
   };
 
-  /**
-   * Clicks one target (found in `seen`) and checks the screen right away, again and again, until
-   * it shows proof or `verifyMs` passes. Returns the last screen so the caller need not rescan.
-   */
-  const registerOne = async (
-    target: ScreenNode,
-    seen: ScreenSnapshot,
-  ): Promise<{ ok: boolean; snap: ScreenSnapshot }> => {
-    const before = seen.nodes.filter(isSuccess).length;
-    await tap(target);
-    if (config.settleMs > 0) await wait(config.settleMs);
-    const deadline = deps.now() + config.verifyMs;
-    for (;;) {
-      const snap = await read();
-      const stillThere = snap.nodes.some((n) => isTarget(n) && keyOf(n) === keyOf(target));
-      if (!stillThere || snap.nodes.filter(isSuccess).length > before) return { ok: true, snap };
-      if (deps.now() >= deadline) return { ok: false, snap };
-      await wait(config.pollMs);
-    }
-  };
-
   try {
     for (tabIndex = 0; tabIndex < tabs.length; tabIndex++) {
       const tab = tabs[tabIndex];
@@ -200,35 +203,31 @@ export async function runAutomation(
         return { status: 'partial', reason: 'TAB_NOT_FOUND', clicks, tabs };
       }
 
-      const attempts = new Map<string, number>();
-      const givenUp = new Set<string>();
+      // Buttons clicked and not yet gone / turned into "Đã đăng ký".
+      const pending = new Set<string>();
       let emptyScans = 0;
-      let carried: ScreenSnapshot | null = null;
       while (emptyScans < 2) {
-        const snap: ScreenSnapshot = carried ?? (await read());
-        carried = null;
-        const target = snap.nodes.find((n) => isTarget(n) && !givenUp.has(keyOf(n)));
-        if (!target) {
+        const snap = await read();
+        const byKey = new Map<string, ScreenNode>();
+        for (const n of snap.nodes) if (isTarget(n) && !byKey.has(keyOf(n))) byKey.set(keyOf(n), n);
+        for (const k of [...pending]) {
+          if (!byKey.has(k)) {
+            pending.delete(k);
+            tab.registered++;
+          }
+        }
+        if (byKey.size === 0) {
           // Confirm twice: the list may still be loading or redrawing after the last click.
           emptyScans++;
           await wait(Math.max(config.settleMs, config.pollMs));
           continue;
         }
         emptyScans = 0;
-        const key = keyOf(target);
-        const n = (attempts.get(key) ?? 0) + 1;
-        attempts.set(key, n);
-        progress(`Click "${target.text}" (lần ${n})`);
-        const outcome = await registerOne(target, snap);
-        carried = outcome.snap;
-        if (outcome.ok) {
-          tab.registered++;
-          progress(`Đã đăng ký ${tab.registered} mục trong ${tab.name}`);
-        } else if (n > config.maxRetriesPerTarget) {
-          givenUp.add(key);
-          tab.failed++;
-          progress(`Bỏ qua một nút sau ${n} lần thử`);
-        }
+        for (const k of byKey.keys()) pending.add(k);
+        progress(`Click ${byKey.size} nút trong ${tab.name}`);
+        // Click everything that is on screen, over and over, until the buttons are gone.
+        await clickAll([...byKey.values()]);
+        await wait(config.clickIntervalMs);
       }
       tab.status = tab.failed > 0 ? 'failed' : 'done';
     }
@@ -247,13 +246,22 @@ export async function runAutomation(
 }
 
 /** Hard stop for a point run, so "until stopped" can still never run away. */
-const MAX_POINT_CLICKS = 100_000;
+const MAX_POINT_CLICKS = 10_000_000;
+/** Taps per gesture (Android allows 20 strokes). */
+const MAX_SEQUENCE = 20;
+/** A batch lasts about this long, which is also the longest a Stop can take to be noticed. */
+const BATCH_MS = 300;
+/** Assumed duration of one tap, for sizing batches. */
+const TAP_MS = 10;
+/** From this delay up, every click is sent and shown on its own (no batching). */
+const SLOW_MS = 100;
 
-export type PointsDeps = Pick<RunnerDeps, 'snapshot' | 'tap' | 'sleep' | 'onTap' | 'onProgress'>;
+export type PointsDeps = Pick<RunnerDeps, 'snapshot' | 'tap' | 'tapSequence' | 'sleep' | 'onTap' | 'onProgress'>;
 
 /**
- * Taps the saved points in order, `pointRounds` times (0 = until stopped), pausing
- * `pointIntervalMs` after each. Never taps while FlyClick itself is in front.
+ * Taps the saved points in order and starts over (1 -> 2 -> ... -> 1 -> ...), `pointRounds` times
+ * (0 = until stopped), `pointIntervalMs` between taps. Never taps while FlyClick itself is in front.
+ * With `tapSequence` many taps go out in one gesture, which is what makes it fast.
  */
 export async function runPoints(
   deps: PointsDeps,
@@ -264,7 +272,14 @@ export async function runPoints(
   const progress = (message: string) => deps.onProgress?.({ tabIndex: 0, tabs: [], clicks, message });
   const result = (status: RunResult['status'], reason?: string): RunResult => ({ status, reason, clicks, tabs: [] });
 
-  if (config.points.length === 0) return result('failed', 'NO_POINTS');
+  const { points } = config;
+  const n = points.length;
+  if (n === 0) return result('failed', 'NO_POINTS');
+  const limit = config.pointRounds === 0 ? MAX_POINT_CLICKS : config.pointRounds * n;
+  const perBatch =
+    config.pointIntervalMs >= SLOW_MS
+      ? 1
+      : Math.max(1, Math.min(MAX_SEQUENCE, Math.floor(BATCH_MS / (config.pointIntervalMs + TAP_MS))));
 
   /** True once another app is in front; false if stopped while waiting. */
   const inOtherApp = async (): Promise<boolean> => {
@@ -277,22 +292,29 @@ export async function runPoints(
     }
   };
 
-  for (let round = 0; config.pointRounds === 0 || round < config.pointRounds; round++) {
-    for (const point of config.points) {
-      // Checking the screen costs time, so do it every few taps rather than every one.
-      if (clicks % 5 === 0 && !(await inOtherApp())) return result('stopped', 'USER_STOPPED');
-      if (signal.aborted) return result('stopped', 'USER_STOPPED');
-      if (clicks >= MAX_POINT_CLICKS) return result('failed', 'MAX_CLICKS');
-      clicks++;
-      deps.onTap?.(clicks, point.x, point.y);
-      try {
-        await deps.tap(point.x, point.y);
-        progress(`Vòng ${round + 1}`);
-      } catch (e) {
-        progress(`Click không thực hiện được: ${e instanceof Error ? e.message : String(e)}`);
+  while (clicks < limit) {
+    // Checking the screen costs time, so do it once per batch rather than per tap.
+    if (!(await inOtherApp()) || signal.aborted) return result('stopped', 'USER_STOPPED');
+    const start = clicks % n;
+    const useSeq = !!deps.tapSequence && config.pointIntervalMs < SLOW_MS;
+    const count = useSeq ? Math.min(perBatch, limit - clicks) : 1;
+    const batch = Array.from({ length: count }, (_, i) => points[(start + i) % n]);
+    for (let i = 0; i < Math.min(count, n); i++) deps.onTap?.(clicks + i + 1, batch[i].x, batch[i].y, 0);
+    try {
+      if (useSeq) {
+        await deps.tapSequence!(batch.flatMap((p) => [p.x, p.y]), count, config.pointIntervalMs);
+      } else {
+        await deps.tap(batch[0].x, batch[0].y);
       }
-      if (config.pointIntervalMs > 0) await deps.sleep(config.pointIntervalMs, signal);
+      clicks += count;
+      progress(`Vòng ${Math.floor((clicks - 1) / n) + 1}`);
+    } catch (e) {
+      clicks += count;
+      progress(`Click không thực hiện được: ${e instanceof Error ? e.message : String(e)}`);
+      await deps.sleep(50, signal); // do not spin hot on a persistent error
     }
+    // With tapSequence the gap is already inside the gesture.
+    if (!useSeq && config.pointIntervalMs > 0) await deps.sleep(config.pointIntervalMs, signal);
   }
   return result('completed');
 }

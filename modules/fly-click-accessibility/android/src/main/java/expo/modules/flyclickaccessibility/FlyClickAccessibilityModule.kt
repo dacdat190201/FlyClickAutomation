@@ -81,8 +81,50 @@ class FlyClickAccessibilityModule : Module() {
       mainHandler.post { FlyClickAccessibilityService.instance?.setControlsStatus(text) }
     }
 
-    Function("showTapMarker") { x: Double, y: Double, label: String ->
-      mainHandler.post { FlyClickAccessibilityService.instance?.showTapMarker(x.toInt(), y.toInt(), label) }
+    // [size] is the ring diameter in pixels (0 = default).
+    Function("showTapMarker") { x: Double, y: Double, label: String, size: Double ->
+      mainHandler.post {
+        FlyClickAccessibilityService.instance?.showTapMarker(x.toInt(), y.toInt(), label, size.toInt())
+      }
+    }
+
+    // Up to 20 taps in one gesture. [flat] = x1,y1,x2,y2,...; taps cycle through the points.
+    AsyncFunction("tapSequence") { flat: List<Double>, count: Int, durationMs: Double, gapMs: Double, promise: Promise ->
+      val service = FlyClickAccessibilityService.instance
+      if (service == null) {
+        promise.reject("ERR_SERVICE_NOT_CONNECTED", "The accessibility service is not enabled or not connected.", null)
+        return@AsyncFunction
+      }
+      if (flat.size < 2 || flat.size % 2 != 0 || count < 1 || count > 20 ||
+        durationMs.isNaN() || durationMs < 1.0 || gapMs.isNaN() || gapMs < 0.0
+      ) {
+        promise.reject("ERR_INVALID_DURATION", "Invalid tap sequence.", null)
+        return@AsyncFunction
+      }
+      val size = Point()
+      @Suppress("DEPRECATION")
+      (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.getRealSize(size)
+      for (i in flat.indices step 2) {
+        if (flat[i].isNaN() || flat[i + 1].isNaN() || flat[i] < 0 || flat[i + 1] < 0 || flat[i] > size.x || flat[i + 1] > size.y) {
+          promise.reject("ERR_OUT_OF_BOUNDS", "A point is outside the ${size.x}x${size.y} screen.", null)
+          return@AsyncFunction
+        }
+      }
+      if (!gestureInFlight.compareAndSet(false, true)) {
+        promise.reject("ERR_BUSY", "Another tap is still in progress.", null)
+        return@AsyncFunction
+      }
+      mainHandler.post {
+        service.performTapSequence(flat, count, durationMs.toLong(), gapMs.toLong()) { outcome ->
+          gestureInFlight.set(false)
+          when (outcome) {
+            FlyClickAccessibilityService.TapOutcome.COMPLETED -> promise.resolve(true)
+            FlyClickAccessibilityService.TapOutcome.CANCELLED -> promise.resolve(false)
+            FlyClickAccessibilityService.TapOutcome.REJECTED ->
+              promise.reject("ERR_DISPATCH_REJECTED", "Android did not accept the gesture.", null)
+          }
+        }
+      }
     }
 
     Function("hideFloatingControls") {
