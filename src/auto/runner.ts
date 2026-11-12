@@ -57,7 +57,7 @@ export async function runAutomation(
   signal: AbortSignal,
 ): Promise<RunResult> {
   const startedAt = deps.now();
-  const { isTarget, isSuccess } = makeMatchers(config);
+  const { isTarget } = makeMatchers(config);
   const tabs: TabResult[] = config.tabs.map((name) => ({
     name,
     status: 'pending',
